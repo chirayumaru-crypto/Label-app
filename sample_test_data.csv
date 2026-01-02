@@ -1,0 +1,6 @@
+Engagement_ID,timestamp,R_SPH,R_CYL,R_AXIS,R_ADD,L_SPH,L_CYL,L_AXIS,L_ADD,PD,Chart_Number,Occluder_State,Chart_Display,Speaker,Utterance_Text,Translation_in_En,Speaker_Intent,Detected_Language,Hesitation_Markers,Requires_Verification
+ENG-001,2024-01-02 10:00:00,1.50,-0.50,90,2.00,1.75,-0.75,180,2.00,64,1,open,normal,patient,I can see the letters clearly,I can see the letters clearly,affirmative,en,none,no
+ENG-002,2024-01-02 10:15:00,2.00,-1.00,45,2.25,2.25,-1.25,135,2.25,65,2,closed,abnormal,doctor,Can you read line 3?,Can you read line 3?,question,en,some,yes
+ENG-003,2024-01-02 10:30:00,0.75,-0.25,180,1.75,1.25,-0.50,90,1.75,63,1,open,normal,patient,It's a bit blurry on the right,It's a bit blurry on the right,observation,en,moderate,yes
+ENG-004,2024-01-02 10:45:00,2.50,-1.50,90,2.50,2.75,-1.75,180,2.50,66,3,open,normal,doctor,Let me check the left eye,Let me check the left eye,directive,en,none,no
+ENG-005,2024-01-02 11:00:00,1.25,-0.75,135,2.00,1.50,-1.00,45,2.00,64,2,closed,abnormal,patient,Yes that's better now,Yes that's better now,affirmative,en,slight,no
