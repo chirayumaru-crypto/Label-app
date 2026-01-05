@@ -28,6 +28,12 @@ def seed_users():
             "email": "labeler2@example.com",
             "password": "password123",
             "role": UserRole.LABELER
+        },
+        {
+            "name": "Lenskart Admin",
+            "email": "admin@lenskart.com",
+            "password": "adminpassword",
+            "role": UserRole.ADMIN
         }
     ]
 
