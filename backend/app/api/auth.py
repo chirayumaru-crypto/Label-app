@@ -32,12 +32,13 @@ def get_current_user(db: Session = Depends(get_db), token: str = Depends(oauth2_
 
 @router.post("/register", response_model=UserOut)
 def register(user_in: UserCreate, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.email == user_in.email).first()
+    email_lower = user_in.email.lower().strip()
+    user = db.query(User).filter(User.email == email_lower).first()
     if user:
         raise HTTPException(status_code=400, detail="Email already registered")
     
     db_user = User(
-        email=user_in.email,
+        email=email_lower,
         name=user_in.name,
         password_hash=get_password_hash(user_in.password),
         role=user_in.role
@@ -49,7 +50,8 @@ def register(user_in: UserCreate, db: Session = Depends(get_db)):
 
 @router.post("/login", response_model=Token)
 def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.email == form_data.username).first()
+    email_lower = form_data.username.lower().strip()
+    user = db.query(User).filter(User.email == email_lower).first()
     if not user or not verify_password(form_data.password, user.password_hash):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

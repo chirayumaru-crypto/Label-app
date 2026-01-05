@@ -132,7 +132,7 @@ def save_labels(dataset_id: int, request: SaveLabelsRequest, db: Session = Depen
             existing_label.intent_of_optum = row_data.intent_of_optum
             existing_label.confidence_of_optum = int(row_data.confidence_of_optum) if row_data.confidence_of_optum else 0
             existing_label.patient_confidence_score = int(row_data.patient_confidence_score) if row_data.patient_confidence_score else 0
-            existing_label.flag = row_data.flag if row_data.flag else "GREEN"
+            existing_label.flag = row_data.flag if row_data.flag else "NONE"
             existing_label.reason_for_flag = row_data.reason_for_flag
         else:
             # Create new
@@ -144,7 +144,7 @@ def save_labels(dataset_id: int, request: SaveLabelsRequest, db: Session = Depen
                 intent_of_optum=row_data.intent_of_optum,
                 confidence_of_optum=int(row_data.confidence_of_optum) if row_data.confidence_of_optum else 0,
                 patient_confidence_score=int(row_data.patient_confidence_score) if row_data.patient_confidence_score else 0,
-                flag=row_data.flag if row_data.flag else "GREEN",
+                flag=row_data.flag if row_data.flag else "NONE",
                 reason_for_flag=row_data.reason_for_flag
             )
             db.add(new_label)

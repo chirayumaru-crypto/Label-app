@@ -63,8 +63,8 @@ class LabelCreate(BaseModel):
     step: str
     substep: Optional[str] = ""
     intent_of_optum: str
-    confidence_of_optum: int = Field(ge=0, le=100)
-    patient_confidence_score: int = Field(ge=0, le=100)
+    confidence_of_optum: int = Field(ge=0, le=10)
+    patient_confidence_score: int = Field(ge=0, le=10)
     flag: LabelFlag
     reason_for_flag: Optional[str] = None
 

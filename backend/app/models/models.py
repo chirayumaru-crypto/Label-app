@@ -16,6 +16,7 @@ class AssignmentStatus(str, enum.Enum):
     RELEASED = "RELEASED"
 
 class LabelFlag(str, enum.Enum):
+    NONE = "NONE"
     GREEN = "GREEN"
     YELLOW = "YELLOW"
     RED = "RED"

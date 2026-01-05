@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import api from '../services/api';
-import { ChevronLeft, Save, Download, Eye } from 'lucide-react';
+import { ChevronLeft, Save, Download, Eye, HelpCircle, X } from 'lucide-react';
 
 interface RowData {
     id: number;
@@ -23,10 +23,6 @@ interface RowData {
     speaker: string;
     utterance_text: string;
     translation_in_en: string;
-    speaker_intent: string;
-    detected_language: string;
-    hesitation_markers: string;
-    requires_verification: string;
 
     // Editable annotation fields
     step: string;
@@ -38,6 +34,149 @@ interface RowData {
     reason_for_flag: string;
 }
 
+// Step options for dropdown
+const STEP_OPTIONS = [
+    { value: "", label: "Select Step" },
+    { value: "Step 0", label: "Step 0: Greeting & Language Preference" },
+    { value: "Step 1", label: "Step 1: History taking" },
+    { value: "Step 2", label: "Step 2: Pre-Eye Testing & detail confirmation" },
+    { value: "Step 3", label: "Step 3: Visual Acuity Assessment" },
+    { value: "Step 4", label: "Step 4: Subjective Refraction - JCC & Duochrome" },
+    { value: "Step 5", label: "Step 5: Near Vision" },
+    { value: "Step 6", label: "Step 6: New Prescription Verification" },
+    { value: "Step 7", label: "Step 7: Power Updation" },
+    { value: "Step 8", label: "Step 8: Power Explanation" },
+    { value: "Step 9", label: "Step 9: Handover" },
+];
+
+// Labeling Guide Component
+const LabelingGuide = ({ onClose }: { onClose: () => void }) => (
+    <div className="bg-white border-2 border-blue-400 rounded-2xl shadow-xl p-8 mb-8 relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50 rounded-bl-full -z-10 opacity-50" />
+        <button
+            onClick={onClose}
+            className="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-all"
+        >
+            <X size={24} />
+        </button>
+
+        <div className="flex items-center gap-3 mb-6 border-b pb-4">
+            <div className="p-3 bg-blue-600 rounded-xl text-white">
+                <HelpCircle size={28} />
+            </div>
+            <div>
+                <h3 className="text-2xl font-bold text-slate-900">Labeling Protocol Guide</h3>
+                <p className="text-slate-500">Standard operating procedure for eye test data annotation</p>
+            </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 text-sm">
+            <div className="space-y-4">
+                <h4 className="font-bold text-blue-700 uppercase tracking-wider flex items-center gap-2">
+                    <span className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">01</span>
+                    Workflow Steps
+                </h4>
+                <div className="bg-slate-50 p-4 rounded-xl space-y-2 border border-slate-100">
+                    {STEP_OPTIONS.filter(o => o.value).map(opt => (
+                        <div key={opt.value} className="flex gap-2">
+                            <span className="font-bold text-blue-600 shrink-0">{opt.value}:</span>
+                            <span className="text-slate-600">{opt.label.split(': ')[1]}</span>
+                        </div>
+                    ))}
+                </div>
+            </div>
+
+            <div className="space-y-4">
+                <h4 className="font-bold text-blue-700 uppercase tracking-wider flex items-center gap-2">
+                    <span className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">02</span>
+                    Field Definitions
+                </h4>
+                <div className="bg-slate-50 p-4 rounded-xl space-y-4 border border-slate-100">
+                    <div>
+                        <span className="font-bold block text-slate-800">Substep</span>
+                        <p className="text-slate-600">Brief technical description of the action</p>
+                    </div>
+                    <div>
+                        <span className="font-bold block text-slate-800">Intent of Optum</span>
+                        <p className="text-slate-600">Underlying goal or thought process of the examiner</p>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <span className="font-bold block text-slate-800">Optum Conf.</span>
+                            <p className="text-slate-600 text-xs">Score 0-10</p>
+                        </div>
+                        <div>
+                            <span className="font-bold block text-slate-800">Patient Conf.</span>
+                            <p className="text-slate-600 text-xs">Score 0-10</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div className="space-y-4">
+                <h4 className="font-bold text-blue-700 uppercase tracking-wider flex items-center gap-2">
+                    <span className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">03</span>
+                    Flag Protocol
+                </h4>
+                <div className="bg-slate-50 p-4 rounded-xl space-y-3 border border-slate-100">
+                    <div className="flex items-center gap-3 p-2 bg-green-100/50 rounded-lg border border-green-200">
+                        <span className="w-4 h-4 rounded-full bg-green-500 shadow-sm" />
+                        <div>
+                            <span className="font-bold text-green-800 block">GREEN</span>
+                            <p className="text-xs text-green-700">Compulsory core eyetest step</p>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-3 p-2 bg-yellow-100/50 rounded-lg border border-yellow-200">
+                        <span className="w-4 h-4 rounded-full bg-yellow-500 shadow-sm" />
+                        <div>
+                            <span className="font-bold text-yellow-800 block">YELLOW</span>
+                            <p className="text-xs text-yellow-700">Optional or skippable step</p>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-3 p-2 bg-red-100/50 rounded-lg border border-red-200">
+                        <span className="w-4 h-4 rounded-full bg-red-500 shadow-sm" />
+                        <div>
+                            <span className="font-bold text-red-800 block">RED</span>
+                            <p className="text-xs text-red-700">Exclude / Outside eyetest scope</p>
+                        </div>
+                    </div>
+                    <p className="text-xs text-slate-400 italic mt-2">Required: "Reason for Flag" must be filled if RED or YELLOW is selected.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+);
+
+// Get row background color based on flag
+const getRowBackgroundColor = (flag: string): string => {
+    switch (flag) {
+        case 'GREEN':
+            return 'bg-green-50';
+        case 'YELLOW':
+            return 'bg-yellow-50';
+        case 'RED':
+            return 'bg-red-50';
+        case 'NONE':
+        default:
+            return 'bg-white';
+    }
+};
+
+// Get cell background for editable cells based on flag
+const getEditableCellBg = (flag: string): string => {
+    switch (flag) {
+        case 'GREEN':
+            return 'bg-green-100';
+        case 'YELLOW':
+            return 'bg-yellow-100';
+        case 'RED':
+            return 'bg-red-100';
+        case 'NONE':
+        default:
+            return 'bg-white';
+    }
+};
+
 const SpreadsheetLabeling = () => {
     const { datasetId } = useParams();
     const navigate = useNavigate();
@@ -48,6 +187,7 @@ const SpreadsheetLabeling = () => {
     const [rows, setRows] = useState<RowData[]>([]);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
+    const [showGuide, setShowGuide] = useState(true);
 
     useEffect(() => {
         fetchData();
@@ -135,6 +275,13 @@ const SpreadsheetLabeling = () => {
                 </div>
                 <div className="flex items-center gap-3">
                     <button
+                        onClick={() => setShowGuide(!showGuide)}
+                        className="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors text-slate-700"
+                    >
+                        <HelpCircle size={18} />
+                        {showGuide ? 'Hide Guide' : 'Show Guide'}
+                    </button>
+                    <button
                         onClick={handleExport}
                         className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors text-white"
                     >
@@ -152,6 +299,11 @@ const SpreadsheetLabeling = () => {
                     </button>
                 </div>
             </header>
+
+            {/* Labeling Guide */}
+            <div className="p-4 pb-0">
+                {showGuide && <LabelingGuide onClose={() => setShowGuide(false)} />}
+            </div>
 
             {/* Spreadsheet */}
             <div className="flex-1 overflow-auto p-4">
@@ -174,65 +326,63 @@ const SpreadsheetLabeling = () => {
                                 <th className="border border-slate-300 px-3 py-2 text-left bg-blue-100 text-slate-900">Chart_Number</th>
                                 <th className="border border-slate-300 px-3 py-2 text-left bg-blue-100 text-slate-900">Occluder_State</th>
                                 <th className="border border-slate-300 px-3 py-2 text-left bg-blue-100 text-slate-900">Chart_Display</th>
+                                <th className="border border-slate-300 px-3 py-2 text-left bg-blue-100 text-slate-900">Translation_in_En</th>
                                 <th className="border border-slate-300 px-3 py-2 text-left bg-blue-100 text-slate-900">Speaker</th>
                                 <th className="border border-slate-300 px-3 py-2 text-left bg-blue-100 text-slate-900">Utterance_Text</th>
-                                <th className="border border-slate-300 px-3 py-2 text-left bg-blue-100 text-slate-900">Translation_in_En</th>
-                                <th className="border border-slate-300 px-3 py-2 text-left bg-blue-100 text-slate-900">Speaker_Intent</th>
-                                <th className="border border-slate-300 px-3 py-2 text-left bg-blue-100 text-slate-900">Detected_Language</th>
-                                <th className="border border-slate-300 px-3 py-2 text-left bg-blue-100 text-slate-900">Hesitation_Markers</th>
-                                <th className="border border-slate-300 px-3 py-2 text-left bg-blue-100 text-slate-900">Requires_Verification</th>
 
                                 {/* Editable columns */}
-                                <th className="border border-slate-300 px-3 py-2 text-left bg-green-100 text-slate-900">Step</th>
-                                <th className="border border-slate-300 px-3 py-2 text-left bg-green-100 text-slate-900">Substep</th>
-                                <th className="border border-slate-300 px-3 py-2 text-left bg-green-100 text-slate-900">Intent_of_Optum</th>
-                                <th className="border border-slate-300 px-3 py-2 text-left bg-green-100 text-slate-900">Confidence_of_Optum</th>
-                                <th className="border border-slate-300 px-3 py-2 text-left bg-green-100 text-slate-900">Patient_Confidence_Score</th>
-                                <th className="border border-slate-300 px-3 py-2 text-left bg-green-100 text-slate-900">Flag</th>
-                                <th className="border border-slate-300 px-3 py-2 text-left bg-green-100 text-slate-900">Reason_For_Flag</th>
+                                <th className="border border-slate-300 px-3 py-2 text-left bg-purple-100 text-slate-900">Step</th>
+                                <th className="border border-slate-300 px-3 py-2 text-left bg-purple-100 text-slate-900">Substep</th>
+                                <th className="border border-slate-300 px-3 py-2 text-left bg-purple-100 text-slate-900">Intent_of_Optum</th>
+                                <th className="border border-slate-300 px-3 py-2 text-left bg-purple-100 text-slate-900">Confidence_of_Optum</th>
+                                <th className="border border-slate-300 px-3 py-2 text-left bg-purple-100 text-slate-900">Patient_Confidence_Score</th>
+                                <th className="border border-slate-300 px-3 py-2 text-left bg-purple-100 text-slate-900">Flag</th>
+                                <th className="border border-slate-300 px-3 py-2 text-left bg-purple-100 text-slate-900">Reason_For_Flag</th>
                             </tr>
                         </thead>
                         <tbody>
                             {rows.map((row) => (
-                                <tr key={row.id} className="hover:bg-blue-50">
+                                <tr key={row.id} className={`${getRowBackgroundColor(row.flag)} hover:opacity-80 transition-opacity`}>
                                     {/* Read-only cells */}
-                                    <td className="border border-slate-300 px-3 py-2 bg-white text-slate-700">{displayValue(row.engagement_id)}</td>
-                                    <td className="border border-slate-300 px-3 py-2 bg-white text-slate-700">{displayValue(row.timestamp)}</td>
-                                    <td className="border border-slate-300 px-3 py-2 bg-white text-slate-700">{displayValue(row.r_sph)}</td>
-                                    <td className="border border-slate-300 px-3 py-2 bg-white text-slate-700">{displayValue(row.r_cyl)}</td>
-                                    <td className="border border-slate-300 px-3 py-2 bg-white text-slate-700">{displayValue(row.r_axis)}</td>
-                                    <td className="border border-slate-300 px-3 py-2 bg-white text-slate-700">{displayValue(row.r_add)}</td>
-                                    <td className="border border-slate-300 px-3 py-2 bg-white text-slate-700">{displayValue(row.l_sph)}</td>
-                                    <td className="border border-slate-300 px-3 py-2 bg-white text-slate-700">{displayValue(row.l_cyl)}</td>
-                                    <td className="border border-slate-300 px-3 py-2 bg-white text-slate-700">{displayValue(row.l_axis)}</td>
-                                    <td className="border border-slate-300 px-3 py-2 bg-white text-slate-700">{displayValue(row.l_add)}</td>
-                                    <td className="border border-slate-300 px-3 py-2 bg-white text-slate-700">{displayValue(row.pd)}</td>
-                                    <td className="border border-slate-300 px-3 py-2 bg-white text-slate-700">{displayValue(row.chart_number)}</td>
-                                    <td className="border border-slate-300 px-3 py-2 bg-white text-slate-700">{displayValue(row.occluder_state)}</td>
-                                    <td className="border border-slate-300 px-3 py-2 bg-white text-slate-700">{displayValue(row.chart_display)}</td>
-                                    <td className="border border-slate-300 px-3 py-2 bg-white text-slate-700">{displayValue(row.speaker)}</td>
-                                    <td className="border border-slate-300 px-3 py-2 bg-white text-slate-700 max-w-xs truncate">{displayValue(row.utterance_text)}</td>
-                                    <td className="border border-slate-300 px-3 py-2 bg-white text-slate-700 max-w-xs truncate">{displayValue(row.translation_in_en)}</td>
-                                    <td className="border border-slate-300 px-3 py-2 bg-white text-slate-700 max-w-xs truncate">{displayValue(row.speaker_intent)}</td>
-                                    <td className="border border-slate-300 px-3 py-2 bg-white text-slate-700 max-w-xs truncate">{displayValue(row.detected_language)}</td>
-                                    <td className="border border-slate-300 px-3 py-2 bg-white text-slate-700 max-w-xs truncate">{displayValue(row.hesitation_markers)}</td>
-                                    <td className="border border-slate-300 px-3 py-2 bg-white text-slate-700 max-w-xs truncate">{displayValue(row.requires_verification)}</td>
+                                    <td className={`border border-slate-300 px-3 py-2 ${getRowBackgroundColor(row.flag)} text-slate-700`}>{displayValue(row.engagement_id)}</td>
+                                    <td className={`border border-slate-300 px-3 py-2 ${getRowBackgroundColor(row.flag)} text-slate-700`}>{displayValue(row.timestamp)}</td>
+                                    <td className={`border border-slate-300 px-3 py-2 ${getRowBackgroundColor(row.flag)} text-slate-700`}>{displayValue(row.r_sph)}</td>
+                                    <td className={`border border-slate-300 px-3 py-2 ${getRowBackgroundColor(row.flag)} text-slate-700`}>{displayValue(row.r_cyl)}</td>
+                                    <td className={`border border-slate-300 px-3 py-2 ${getRowBackgroundColor(row.flag)} text-slate-700`}>{displayValue(row.r_axis)}</td>
+                                    <td className={`border border-slate-300 px-3 py-2 ${getRowBackgroundColor(row.flag)} text-slate-700`}>{displayValue(row.r_add)}</td>
+                                    <td className={`border border-slate-300 px-3 py-2 ${getRowBackgroundColor(row.flag)} text-slate-700`}>{displayValue(row.l_sph)}</td>
+                                    <td className={`border border-slate-300 px-3 py-2 ${getRowBackgroundColor(row.flag)} text-slate-700`}>{displayValue(row.l_cyl)}</td>
+                                    <td className={`border border-slate-300 px-3 py-2 ${getRowBackgroundColor(row.flag)} text-slate-700`}>{displayValue(row.l_axis)}</td>
+                                    <td className={`border border-slate-300 px-3 py-2 ${getRowBackgroundColor(row.flag)} text-slate-700`}>{displayValue(row.l_add)}</td>
+                                    <td className={`border border-slate-300 px-3 py-2 ${getRowBackgroundColor(row.flag)} text-slate-700`}>{displayValue(row.pd)}</td>
+                                    <td className={`border border-slate-300 px-3 py-2 ${getRowBackgroundColor(row.flag)} text-slate-700`}>{displayValue(row.chart_number)}</td>
+                                    <td className={`border border-slate-300 px-3 py-2 ${getRowBackgroundColor(row.flag)} text-slate-700`}>{displayValue(row.occluder_state)}</td>
+                                    <td className={`border border-slate-300 px-3 py-2 ${getRowBackgroundColor(row.flag)} text-slate-700`}>{displayValue(row.chart_display)}</td>
+                                    <td className={`border border-slate-300 px-3 py-2 ${getRowBackgroundColor(row.flag)} text-slate-700 max-w-xs truncate`}>{displayValue(row.translation_in_en)}</td>
+                                    <td className={`border border-slate-300 px-3 py-2 ${getRowBackgroundColor(row.flag)} text-slate-700`}>{displayValue(row.speaker)}</td>
+                                    <td className={`border border-slate-300 px-3 py-2 ${getRowBackgroundColor(row.flag)} text-slate-700 max-w-xs truncate`}>{displayValue(row.utterance_text)}</td>
 
                                     {/* Editable cells */}
                                     <td className="border border-slate-300 px-1 py-1">
-                                        <input
-                                            type="text"
+                                        <select
                                             value={row.step}
                                             onChange={(e) => handleCellChange(row.id, 'step', e.target.value)}
-                                            className="w-full bg-green-50 border-0 px-2 py-1 text-slate-900 focus:outline-none focus:ring-1 focus:ring-green-500"
-                                        />
+                                            disabled={!!targetUserId}
+                                            className={`w-full ${getEditableCellBg(row.flag)} border-0 px-2 py-1 text-slate-900 focus:outline-none focus:ring-1 focus:ring-purple-500 disabled:cursor-not-allowed`}
+                                        >
+                                            {STEP_OPTIONS.map(opt => (
+                                                <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                            ))}
+                                        </select>
                                     </td>
                                     <td className="border border-slate-300 px-1 py-1">
                                         <input
                                             type="text"
                                             value={row.substep}
                                             onChange={(e) => handleCellChange(row.id, 'substep', e.target.value)}
-                                            className="w-full bg-green-50 border-0 px-2 py-1 text-slate-900 focus:outline-none focus:ring-1 focus:ring-green-500"
+                                            disabled={!!targetUserId}
+                                            placeholder="Description of step"
+                                            className={`w-full ${getEditableCellBg(row.flag)} border-0 px-2 py-1 text-slate-900 focus:outline-none focus:ring-1 focus:ring-purple-500 disabled:cursor-not-allowed`}
                                         />
                                     </td>
                                     <td className="border border-slate-300 px-1 py-1">
@@ -240,35 +390,46 @@ const SpreadsheetLabeling = () => {
                                             type="text"
                                             value={row.intent_of_optum}
                                             onChange={(e) => handleCellChange(row.id, 'intent_of_optum', e.target.value)}
-                                            className="w-full bg-green-50 border-0 px-2 py-1 text-slate-900 focus:outline-none focus:ring-1 focus:ring-green-500"
+                                            disabled={!!targetUserId}
+                                            placeholder="What Optum is thinking/doing"
+                                            className={`w-full ${getEditableCellBg(row.flag)} border-0 px-2 py-1 text-slate-900 focus:outline-none focus:ring-1 focus:ring-purple-500 disabled:cursor-not-allowed`}
                                         />
                                     </td>
                                     <td className="border border-slate-300 px-1 py-1">
                                         <input
-                                            type="text"
+                                            type="number"
+                                            min="0"
+                                            max="10"
                                             value={row.confidence_of_optum}
                                             onChange={(e) => handleCellChange(row.id, 'confidence_of_optum', e.target.value)}
-                                            className="w-full bg-green-50 border-0 px-2 py-1 text-slate-900 focus:outline-none focus:ring-1 focus:ring-green-500"
+                                            disabled={!!targetUserId}
+                                            placeholder="0-10"
+                                            className={`w-full ${getEditableCellBg(row.flag)} border-0 px-2 py-1 text-slate-900 focus:outline-none focus:ring-1 focus:ring-purple-500 disabled:cursor-not-allowed`}
                                         />
                                     </td>
                                     <td className="border border-slate-300 px-1 py-1">
                                         <input
-                                            type="text"
+                                            type="number"
+                                            min="0"
+                                            max="10"
                                             value={row.patient_confidence_score}
                                             onChange={(e) => handleCellChange(row.id, 'patient_confidence_score', e.target.value)}
-                                            className="w-full bg-green-50 border-0 px-2 py-1 text-slate-900 focus:outline-none focus:ring-1 focus:ring-green-500"
+                                            disabled={!!targetUserId}
+                                            placeholder="0-10"
+                                            className={`w-full ${getEditableCellBg(row.flag)} border-0 px-2 py-1 text-slate-900 focus:outline-none focus:ring-1 focus:ring-purple-500 disabled:cursor-not-allowed`}
                                         />
                                     </td>
                                     <td className="border border-slate-300 px-1 py-1">
                                         <select
                                             value={row.flag}
                                             onChange={(e) => handleCellChange(row.id, 'flag', e.target.value)}
-                                            className="w-full bg-green-50 border-0 px-2 py-1 text-slate-900 focus:outline-none focus:ring-1 focus:ring-green-500"
+                                            disabled={!!targetUserId}
+                                            className={`w-full ${getEditableCellBg(row.flag)} border-0 px-2 py-1 text-slate-900 focus:outline-none focus:ring-1 focus:ring-purple-500 disabled:cursor-not-allowed`}
                                         >
-                                            <option value="">-</option>
-                                            <option value="GREEN">GREEN</option>
-                                            <option value="YELLOW">YELLOW</option>
-                                            <option value="RED">RED</option>
+                                            <option value="NONE">⚪ NONE</option>
+                                            <option value="GREEN">🟢 GREEN</option>
+                                            <option value="YELLOW">🟡 YELLOW</option>
+                                            <option value="RED">🔴 RED</option>
                                         </select>
                                     </td>
                                     <td className="border border-slate-300 px-1 py-1">
@@ -276,7 +437,9 @@ const SpreadsheetLabeling = () => {
                                             type="text"
                                             value={row.reason_for_flag}
                                             onChange={(e) => handleCellChange(row.id, 'reason_for_flag', e.target.value)}
-                                            className="w-full bg-green-50 border-0 px-2 py-1 text-slate-900 focus:outline-none focus:ring-1 focus:ring-green-500"
+                                            disabled={!!targetUserId}
+                                            placeholder="Reason for flag"
+                                            className={`w-full ${getEditableCellBg(row.flag)} border-0 px-2 py-1 text-slate-900 focus:outline-none focus:ring-1 focus:ring-purple-500 disabled:cursor-not-allowed`}
                                         />
                                     </td>
                                 </tr>
