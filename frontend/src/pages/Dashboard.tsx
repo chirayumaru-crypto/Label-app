@@ -208,6 +208,16 @@ const Dashboard = () => {
                                                 </button>
                                             )}
 
+
+
+                                            <button
+                                                onClick={() => handleExport(ds.id)}
+                                                className="p-2 text-slate-400 hover:text-primary-400 hover:bg-primary-400/10 rounded-lg transition-colors"
+                                                title="Export CSV"
+                                            >
+                                                <Download size={20} />
+                                            </button>
+
                                             {/* Admin Progress ... */}
                                             {userRole === 'admin' && (
                                                 <div className="relative">
@@ -253,13 +263,7 @@ const Dashboard = () => {
                                                     )}
                                                 </div>
                                             )}
-                                            <button
-                                                onClick={() => handleExport(ds.id)}
-                                                className="p-2 text-slate-400 hover:text-primary-400 hover:bg-primary-400/10 rounded-lg transition-colors"
-                                                title="Export CSV"
-                                            >
-                                                <Download size={20} />
-                                            </button>
+
 
                                             {/* Admin Progress & Review Dropdown */}
                                             <button
