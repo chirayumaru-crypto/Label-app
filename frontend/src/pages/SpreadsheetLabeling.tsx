@@ -38,16 +38,9 @@ interface RowData {
 // Step options for dropdown
 const STEP_OPTIONS = [
     { value: "", label: "Select Step" },
-    { value: "Step 0", label: "Step 0: Greeting & Language Preference" },
-    { value: "Step 1", label: "Step 1: History taking" },
-    { value: "Step 2", label: "Step 2: Pre-Eye Testing & detail confirmation" },
     { value: "Step 3", label: "Step 3: Visual Acuity Assessment" },
     { value: "Step 4", label: "Step 4: Subjective Refraction - JCC & Duochrome" },
     { value: "Step 5", label: "Step 5: Near Vision" },
-    { value: "Step 6", label: "Step 6: New Prescription Verification" },
-    { value: "Step 7", label: "Step 7: Power Updation" },
-    { value: "Step 8", label: "Step 8: Power Explanation" },
-    { value: "Step 9", label: "Step 9: Handover" },
 ];
 
 // Labeling Guide Component
@@ -338,7 +331,6 @@ const SpreadsheetLabeling = () => {
                         <thead className="sticky top-0 bg-blue-100 z-10">
                             <tr>
                                 {/* Read-only columns */}
-                                <th className="border border-slate-300 px-3 py-2 text-left bg-blue-100 text-slate-900">Engagement_ID</th>
                                 <th className="border border-slate-300 px-3 py-2 text-left bg-blue-100 text-slate-900">Timestamp</th>
                                 <th className="border border-slate-300 px-3 py-2 text-left bg-blue-100 text-slate-900">R_SPH</th>
                                 <th className="border border-slate-300 px-3 py-2 text-left bg-blue-100 text-slate-900">R_CYL</th>
@@ -365,107 +357,111 @@ const SpreadsheetLabeling = () => {
                             </tr>
                         </thead>
                         <tbody>
-                            {rows.map((row) => (
-                                <tr key={row.id} className={`${getRowBackgroundColor(row.flag)} hover:opacity-80 transition-opacity`}>
-                                    {/* Read-only cells */}
-                                    <td className={`border border-slate-300 px-3 py-2 ${getRowBackgroundColor(row.flag)} text-slate-700`}>{displayValue(row.engagement_id)}</td>
-                                    <td className={`border border-slate-300 px-3 py-2 ${getRowBackgroundColor(row.flag)} text-slate-700`}>{displayValue(row.timestamp)}</td>
-                                    <td className={`border border-slate-300 px-3 py-2 ${getRowBackgroundColor(row.flag)} text-slate-700`}>{displayValue(row.r_sph)}</td>
-                                    <td className={`border border-slate-300 px-3 py-2 ${getRowBackgroundColor(row.flag)} text-slate-700`}>{displayValue(row.r_cyl)}</td>
-                                    <td className={`border border-slate-300 px-3 py-2 ${getRowBackgroundColor(row.flag)} text-slate-700`}>{displayValue(row.r_axis)}</td>
-                                    <td className={`border border-slate-300 px-3 py-2 ${getRowBackgroundColor(row.flag)} text-slate-700`}>{displayValue(row.r_add)}</td>
-                                    <td className={`border border-slate-300 px-3 py-2 ${getRowBackgroundColor(row.flag)} text-slate-700`}>{displayValue(row.l_sph)}</td>
-                                    <td className={`border border-slate-300 px-3 py-2 ${getRowBackgroundColor(row.flag)} text-slate-700`}>{displayValue(row.l_cyl)}</td>
-                                    <td className={`border border-slate-300 px-3 py-2 ${getRowBackgroundColor(row.flag)} text-slate-700`}>{displayValue(row.l_axis)}</td>
-                                    <td className={`border border-slate-300 px-3 py-2 ${getRowBackgroundColor(row.flag)} text-slate-700`}>{displayValue(row.l_add)}</td>
-                                    <td className={`border border-slate-300 px-3 py-2 ${getRowBackgroundColor(row.flag)} text-slate-700`}>{displayValue(row.pd)}</td>
-                                    <td className={`border border-slate-300 px-3 py-2 ${getRowBackgroundColor(row.flag)} text-slate-700`}>{displayValue(row.chart_number)}</td>
-                                    <td className={`border border-slate-300 px-3 py-2 ${getRowBackgroundColor(row.flag)} text-slate-700`}>{displayValue(row.occluder_state)}</td>
-                                    <td className={`border border-slate-300 px-3 py-2 ${getRowBackgroundColor(row.flag)} text-slate-700`}>{displayValue(row.chart_display)}</td>
-                                    <td className={`border border-slate-300 px-3 py-2 ${getRowBackgroundColor(row.flag)} text-slate-700`}>{displayValue(row.speaker)}</td>
+                            {rows.map((row, index) => {
+                                const prevRow = index > 0 ? rows[index - 1] : null;
+                                const isDiff = (field: keyof RowData) => prevRow && row[field] !== prevRow[field];
 
-                                    {/* Editable cells */}
-                                    <td className="border border-slate-300 px-1 py-1">
-                                        <select
-                                            value={row.step}
-                                            onChange={(e) => handleCellChange(row.id, 'step', e.target.value)}
-                                            disabled={!!targetUserId}
-                                            className={`w-full ${getEditableCellBg(row.flag)} border-0 px-2 py-1 text-slate-900 focus:outline-none focus:ring-1 focus:ring-purple-500 disabled:cursor-not-allowed`}
-                                        >
-                                            {STEP_OPTIONS.map(opt => (
-                                                <option key={opt.value} value={opt.value}>{opt.label}</option>
-                                            ))}
-                                        </select>
-                                    </td>
-                                    <td className="border border-slate-300 px-1 py-1">
-                                        <input
-                                            type="text"
-                                            value={row.substep}
-                                            onChange={(e) => handleCellChange(row.id, 'substep', e.target.value)}
-                                            disabled={!!targetUserId}
-                                            placeholder="Description of step"
-                                            className={`w-full ${getEditableCellBg(row.flag)} border-0 px-2 py-1 text-slate-900 focus:outline-none focus:ring-1 focus:ring-purple-500 disabled:cursor-not-allowed`}
-                                        />
-                                    </td>
-                                    <td className="border border-slate-300 px-1 py-1">
-                                        <input
-                                            type="text"
-                                            value={row.intent_of_optum}
-                                            onChange={(e) => handleCellChange(row.id, 'intent_of_optum', e.target.value)}
-                                            disabled={!!targetUserId}
-                                            placeholder="What Optum is thinking/doing"
-                                            className={`w-full ${getEditableCellBg(row.flag)} border-0 px-2 py-1 text-slate-900 focus:outline-none focus:ring-1 focus:ring-purple-500 disabled:cursor-not-allowed`}
-                                        />
-                                    </td>
-                                    <td className="border border-slate-300 px-1 py-1">
-                                        <input
-                                            type="number"
-                                            min="0"
-                                            max="10"
-                                            value={row.confidence_of_optum}
-                                            onChange={(e) => handleCellChange(row.id, 'confidence_of_optum', e.target.value)}
-                                            disabled={!!targetUserId}
-                                            placeholder="0-10"
-                                            className={`w-full ${getEditableCellBg(row.flag)} border-0 px-2 py-1 text-slate-900 focus:outline-none focus:ring-1 focus:ring-purple-500 disabled:cursor-not-allowed`}
-                                        />
-                                    </td>
-                                    <td className="border border-slate-300 px-1 py-1">
-                                        <input
-                                            type="number"
-                                            min="0"
-                                            max="10"
-                                            value={row.patient_confidence_score}
-                                            onChange={(e) => handleCellChange(row.id, 'patient_confidence_score', e.target.value)}
-                                            disabled={!!targetUserId}
-                                            placeholder="0-10"
-                                            className={`w-full ${getEditableCellBg(row.flag)} border-0 px-2 py-1 text-slate-900 focus:outline-none focus:ring-1 focus:ring-purple-500 disabled:cursor-not-allowed`}
-                                        />
-                                    </td>
-                                    <td className="border border-slate-300 px-1 py-1">
-                                        <select
-                                            value={row.flag}
-                                            onChange={(e) => handleCellChange(row.id, 'flag', e.target.value)}
-                                            disabled={!!targetUserId}
-                                            className={`w-full ${getEditableCellBg(row.flag)} border-0 px-2 py-1 text-slate-900 focus:outline-none focus:ring-1 focus:ring-purple-500 disabled:cursor-not-allowed`}
-                                        >
-                                            <option value="NONE">⚪ NONE</option>
-                                            <option value="GREEN">🟢 GREEN</option>
-                                            <option value="YELLOW">🟡 YELLOW</option>
-                                            <option value="RED">🔴 RED</option>
-                                        </select>
-                                    </td>
-                                    <td className="border border-slate-300 px-1 py-1">
-                                        <input
-                                            type="text"
-                                            value={row.reason_for_flag}
-                                            onChange={(e) => handleCellChange(row.id, 'reason_for_flag', e.target.value)}
-                                            disabled={!!targetUserId}
-                                            placeholder="Reason for flag"
-                                            className={`w-full ${getEditableCellBg(row.flag)} border-0 px-2 py-1 text-slate-900 focus:outline-none focus:ring-1 focus:ring-purple-500 disabled:cursor-not-allowed`}
-                                        />
-                                    </td>
-                                </tr>
-                            ))}
+                                return (
+                                    <tr key={row.id} className={`${getRowBackgroundColor(row.flag)} hover:opacity-80 transition-opacity`}>
+                                        {/* Read-only cells */}
+                                        <td className={`border border-slate-300 px-3 py-2 ${getRowBackgroundColor(row.flag)} text-slate-700`}>{displayValue(row.timestamp)}</td>
+                                        <td className={`border border-slate-300 px-3 py-2 ${getRowBackgroundColor(row.flag)} text-slate-700 ${isDiff('r_sph') ? 'bg-amber-100 font-bold text-amber-900' : ''}`}>{displayValue(row.r_sph)}</td>
+                                        <td className={`border border-slate-300 px-3 py-2 ${getRowBackgroundColor(row.flag)} text-slate-700 ${isDiff('r_cyl') ? 'bg-amber-100 font-bold text-amber-900' : ''}`}>{displayValue(row.r_cyl)}</td>
+                                        <td className={`border border-slate-300 px-3 py-2 ${getRowBackgroundColor(row.flag)} text-slate-700 ${isDiff('r_axis') ? 'bg-amber-100 font-bold text-amber-900' : ''}`}>{displayValue(row.r_axis)}</td>
+                                        <td className={`border border-slate-300 px-3 py-2 ${getRowBackgroundColor(row.flag)} text-slate-700 ${isDiff('r_add') ? 'bg-amber-100 font-bold text-amber-900' : ''}`}>{displayValue(row.r_add)}</td>
+                                        <td className={`border border-slate-300 px-3 py-2 ${getRowBackgroundColor(row.flag)} text-slate-700 ${isDiff('l_sph') ? 'bg-amber-100 font-bold text-amber-900' : ''}`}>{displayValue(row.l_sph)}</td>
+                                        <td className={`border border-slate-300 px-3 py-2 ${getRowBackgroundColor(row.flag)} text-slate-700 ${isDiff('l_cyl') ? 'bg-amber-100 font-bold text-amber-900' : ''}`}>{displayValue(row.l_cyl)}</td>
+                                        <td className={`border border-slate-300 px-3 py-2 ${getRowBackgroundColor(row.flag)} text-slate-700 ${isDiff('l_axis') ? 'bg-amber-100 font-bold text-amber-900' : ''}`}>{displayValue(row.l_axis)}</td>
+                                        <td className={`border border-slate-300 px-3 py-2 ${getRowBackgroundColor(row.flag)} text-slate-700 ${isDiff('l_add') ? 'bg-amber-100 font-bold text-amber-900' : ''}`}>{displayValue(row.l_add)}</td>
+                                        <td className={`border border-slate-300 px-3 py-2 ${getRowBackgroundColor(row.flag)} text-slate-700 ${isDiff('pd') ? 'bg-amber-100 font-bold text-amber-900' : ''}`}>{displayValue(row.pd)}</td>
+                                        <td className={`border border-slate-300 px-3 py-2 ${getRowBackgroundColor(row.flag)} text-slate-700 ${isDiff('chart_number') ? 'bg-amber-100 font-bold text-amber-900' : ''}`}>{displayValue(row.chart_number)}</td>
+                                        <td className={`border border-slate-300 px-3 py-2 ${getRowBackgroundColor(row.flag)} text-slate-700 ${isDiff('occluder_state') ? 'bg-amber-100 font-bold text-amber-900' : ''}`}>{displayValue(row.occluder_state)}</td>
+                                        <td className={`border border-slate-300 px-3 py-2 ${getRowBackgroundColor(row.flag)} text-slate-700 ${isDiff('chart_display') ? 'bg-amber-100 font-bold text-amber-900' : ''}`}>{displayValue(row.chart_display)}</td>
+                                        <td className={`border border-slate-300 px-3 py-2 ${getRowBackgroundColor(row.flag)} text-slate-700`}>{displayValue(row.speaker)}</td>
+
+                                        {/* Editable cells */}
+                                        <td className="border border-slate-300 px-1 py-1">
+                                            <select
+                                                value={row.step}
+                                                onChange={(e) => handleCellChange(row.id, 'step', e.target.value)}
+                                                disabled={!!targetUserId}
+                                                className={`w-full ${getEditableCellBg(row.flag)} border-0 px-2 py-1 text-slate-900 focus:outline-none focus:ring-1 focus:ring-purple-500 disabled:cursor-not-allowed`}
+                                            >
+                                                {STEP_OPTIONS.map(opt => (
+                                                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                                ))}
+                                            </select>
+                                        </td>
+                                        <td className="border border-slate-300 px-1 py-1">
+                                            <input
+                                                type="text"
+                                                value={row.substep}
+                                                onChange={(e) => handleCellChange(row.id, 'substep', e.target.value)}
+                                                disabled={!!targetUserId}
+                                                placeholder="Description of step"
+                                                className={`w-full ${getEditableCellBg(row.flag)} border-0 px-2 py-1 text-slate-900 focus:outline-none focus:ring-1 focus:ring-purple-500 disabled:cursor-not-allowed`}
+                                            />
+                                        </td>
+                                        <td className="border border-slate-300 px-1 py-1">
+                                            <input
+                                                type="text"
+                                                value={row.intent_of_optum}
+                                                onChange={(e) => handleCellChange(row.id, 'intent_of_optum', e.target.value)}
+                                                disabled={!!targetUserId}
+                                                placeholder="What Optum is thinking/doing"
+                                                className={`w-full ${getEditableCellBg(row.flag)} border-0 px-2 py-1 text-slate-900 focus:outline-none focus:ring-1 focus:ring-purple-500 disabled:cursor-not-allowed`}
+                                            />
+                                        </td>
+                                        <td className="border border-slate-300 px-1 py-1">
+                                            <input
+                                                type="number"
+                                                min="0"
+                                                max="10"
+                                                value={row.confidence_of_optum}
+                                                onChange={(e) => handleCellChange(row.id, 'confidence_of_optum', e.target.value)}
+                                                disabled={!!targetUserId}
+                                                placeholder="0-10"
+                                                className={`w-full ${getEditableCellBg(row.flag)} border-0 px-2 py-1 text-slate-900 focus:outline-none focus:ring-1 focus:ring-purple-500 disabled:cursor-not-allowed`}
+                                            />
+                                        </td>
+                                        <td className="border border-slate-300 px-1 py-1">
+                                            <input
+                                                type="number"
+                                                min="0"
+                                                max="10"
+                                                value={row.patient_confidence_score}
+                                                onChange={(e) => handleCellChange(row.id, 'patient_confidence_score', e.target.value)}
+                                                disabled={!!targetUserId}
+                                                placeholder="0-10"
+                                                className={`w-full ${getEditableCellBg(row.flag)} border-0 px-2 py-1 text-slate-900 focus:outline-none focus:ring-1 focus:ring-purple-500 disabled:cursor-not-allowed`}
+                                            />
+                                        </td>
+                                        <td className="border border-slate-300 px-1 py-1">
+                                            <select
+                                                value={row.flag}
+                                                onChange={(e) => handleCellChange(row.id, 'flag', e.target.value)}
+                                                disabled={!!targetUserId}
+                                                className={`w-full ${getEditableCellBg(row.flag)} border-0 px-2 py-1 text-slate-900 focus:outline-none focus:ring-1 focus:ring-purple-500 disabled:cursor-not-allowed`}
+                                            >
+                                                <option value="NONE">⚪ NONE</option>
+                                                <option value="GREEN">🟢 GREEN</option>
+                                                <option value="YELLOW">🟡 YELLOW</option>
+                                                <option value="RED">🔴 RED</option>
+                                            </select>
+                                        </td>
+                                        <td className="border border-slate-300 px-1 py-1">
+                                            <input
+                                                type="text"
+                                                value={row.reason_for_flag}
+                                                onChange={(e) => handleCellChange(row.id, 'reason_for_flag', e.target.value)}
+                                                disabled={!!targetUserId}
+                                                placeholder="Reason for flag"
+                                                className={`w-full ${getEditableCellBg(row.flag)} border-0 px-2 py-1 text-slate-900 focus:outline-none focus:ring-1 focus:ring-purple-500 disabled:cursor-not-allowed`}
+                                            />
+                                        </td>
+                                    </tr>
+                                );
+                            })}
                         </tbody>
                     </table>
                 </div>

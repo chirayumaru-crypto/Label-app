@@ -87,6 +87,12 @@ async def upload_dataset(
         df = df[~mask].reset_index(drop=True)
         print(f"Deduplicated: Dropped {mask.sum()} adjacent duplicate rows.")
 
+    # Filter out rows where Speaker is Patient (case-insensitive)
+    if 'Speaker' in df.columns:
+        initial_count = len(df)
+        df = df[df['Speaker'].astype(str).str.lower() != 'patient'].reset_index(drop=True)
+        print(f"Filtered: Dropped {initial_count - len(df)} rows where speaker was 'Patient'.")
+
     dataset = Dataset(name=name, uploaded_by=current_user.id)
     db.add(dataset)
     db.flush() # Get dataset id
