@@ -68,18 +68,24 @@ async def upload_dataset(
         if target_col in required_cols and target_col not in df.columns:
             raise HTTPException(status_code=400, detail=f"Missing required column: {target_col}")
 
-    # Drop adjacent duplicates based on clinical columns
-    check_cols = [
-        'R_SPH', 'R_CYL', 'R_AXIS', 'R_ADD', 'L_SPH', 'L_CYL', 'L_AXIS', 'L_ADD',
-        'PD', 'Chart_Number', 'Occluder_State', 'Chart_Display', 'Speaker'
+    # Deduplicate adjacent rows based on specific clinical columns
+    dedup_cols = [
+        'R_SPH', 'R_CYL', 'R_AXIS', 'R_ADD', 
+        'L_SPH', 'L_CYL', 'L_AXIS', 'L_ADD', 
+        'PD', 'Chart_Number', 'Occluder_State', 'Chart_Display'
     ]
-    available_check_cols = [c for c in check_cols if c in df.columns]
-    if available_check_cols:
-        # Identify rows that are identical to their immediate predecessor
-        # fillna ensures that empty cells (NaN) are compared correctly
-        is_duplicate = (df[available_check_cols].fillna('').shift() == df[available_check_cols].fillna('')).all(axis=1)
-        df = df[~is_duplicate].reset_index(drop=True)
-        print(f"Removed {is_duplicate.sum()} adjacent duplicate rows")
+    
+    # Filter to only columns that actually exist in df
+    existing_dedup_cols = [c for c in dedup_cols if c in df.columns]
+    
+    if existing_dedup_cols:
+        # Fill NaN with empty string for consistent comparison
+        df_dedup = df[existing_dedup_cols].fillna("")
+        # Compare each row with the previous one
+        mask = (df_dedup == df_dedup.shift()).all(axis=1)
+        # Keep non-duplicates
+        df = df[~mask].reset_index(drop=True)
+        print(f"Deduplicated: Dropped {mask.sum()} adjacent duplicate rows.")
 
     dataset = Dataset(name=name, uploaded_by=current_user.id)
     db.add(dataset)
