@@ -42,7 +42,7 @@ async def upload_dataset(
         'Translation_in_En', 'Speaker_Intent', 'Detected_Language',
         'Hesitation_Markers', 'Requires_Verification'
     ]
-    required_cols = ['Engagement_ID', 'timestamp', 'Speaker', 'Utterance_Text']
+    required_cols = ['timestamp', 'Speaker', 'Utterance_Text']
     
     # Column Aliases
     aliases = {
