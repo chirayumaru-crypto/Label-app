@@ -30,7 +30,7 @@ def get_current_user(db: Session = Depends(get_db), token: str = Depends(oauth2_
         raise credentials_exception
     return user
 
-@router.post("/register", response_model=UserOut)
+@router.post("/register")
 def register(user_in: UserCreate, db: Session = Depends(get_db)):
     email_lower = user_in.email.lower().strip()
     user = db.query(User).filter(User.email == email_lower).first()
@@ -46,7 +46,19 @@ def register(user_in: UserCreate, db: Session = Depends(get_db)):
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
-    return db_user
+    
+    # Auto-login after registration
+    access_token = create_access_token(subject=db_user.id)
+    return {
+        "user": {
+            "id": str(db_user.id),
+            "email": db_user.email,
+            "name": db_user.name,
+            "role": db_user.role
+        },
+        "access_token": access_token, 
+        "token_type": "bearer"
+    }
 
 @router.post("/login", response_model=Token)
 def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
