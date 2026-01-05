@@ -197,7 +197,11 @@ const SpreadsheetLabeling = () => {
                 ? `/spreadsheet/${datasetId}/rows?target_user_id=${targetUserId}`
                 : `/spreadsheet/${datasetId}/rows`;
             const response = await api.get(endpoint);
-            setRows(response.data);
+            // Filter out Patient rows on client-side for consistent behavior across all datasets
+            const filteredRows = response.data.filter((r: any) =>
+                r.speaker?.toLowerCase() !== 'patient'
+            );
+            setRows(filteredRows);
         } catch (err) {
             console.error('Failed to fetch data');
         } finally {
