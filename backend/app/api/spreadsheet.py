@@ -1,10 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from ..database import get_db
-from ..models.models import Dataset, LogRow, Label, User
+from ..models.models import Dataset, LogRow, Label, User, UserRole
+from sqlalchemy import func
 from ..schemas.schemas import LogRowOut
 from .auth import get_current_user
-from typing import List
+from typing import List, Optional
 from pydantic import BaseModel
 
 router = APIRouter(prefix="/spreadsheet", tags=["spreadsheet"])
@@ -43,19 +44,38 @@ class SpreadsheetRow(BaseModel):
 class SaveLabelsRequest(BaseModel):
     rows: List[SpreadsheetRow]
 
+class UserProgress(BaseModel):
+    user_id: str
+    name: str
+    email: str
+    labeled_count: int
+    percentage: int
+
 @router.get("/{dataset_id}/rows", response_model=List[SpreadsheetRow])
-def get_dataset_rows(dataset_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def get_dataset_rows(
+    dataset_id: int, 
+    target_user_id: Optional[str] = None,
+    db: Session = Depends(get_db), 
+    current_user: User = Depends(get_current_user)
+):
     """Get all rows for a dataset in spreadsheet format"""
     dataset = db.query(Dataset).filter(Dataset.id == dataset_id).first()
     if not dataset:
         raise HTTPException(status_code=404, detail="Dataset not found")
     
+    # Admin Review Logic
+    viewer_id = current_user.id
+    if target_user_id:
+        if current_user.role != UserRole.ADMIN:
+            raise HTTPException(status_code=403, detail="Only admins can view other users' work")
+        viewer_id = target_user_id
+    
     rows = db.query(LogRow).filter(LogRow.dataset_id == dataset_id).order_by(LogRow.row_index).all()
     
     result = []
     for row in rows:
-        # Get existing label if any
-        label = db.query(Label).filter(Label.log_row_id == row.id, Label.labeled_by == current_user.id).first()
+        # Get existing label if any (filtered by viewer_id)
+        label = db.query(Label).filter(Label.log_row_id == row.id, Label.labeled_by == viewer_id).first()
         
         result.append(SpreadsheetRow(
             id=row.id,
@@ -179,3 +199,33 @@ def export_dataset(dataset_id: int, db: Session = Depends(get_db), current_user:
         media_type="text/csv",
         headers={"Content-Disposition": f"attachment; filename=dataset_{dataset_id}_labeled.csv"}
     )
+
+@router.get("/{dataset_id}/progress", response_model=List[UserProgress])
+def get_dataset_progress(dataset_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    if current_user.role != UserRole.ADMIN:
+         raise HTTPException(status_code=403, detail="Only admins can view progress")
+    
+    # 1. Get total rows in dataset
+    total_rows = db.query(LogRow).filter(LogRow.dataset_id == dataset_id).count()
+    if total_rows == 0: return []
+    
+    # 2. Group labels by user
+    stats = db.query(Label.labeled_by, func.count(Label.id))\
+        .join(LogRow)\
+        .filter(LogRow.dataset_id == dataset_id)\
+        .group_by(Label.labeled_by).all()
+        
+    results = []
+    for user_id, count in stats:
+        user = db.query(User).filter(User.id == user_id).first()
+        if user:
+            pct = int((count / total_rows) * 100)
+            results.append(UserProgress(
+                user_id=str(user.id), 
+                name=str(user.name), 
+                email=str(user.email), 
+                labeled_count=count, 
+                percentage=min(100, pct)
+            ))
+            
+    return results

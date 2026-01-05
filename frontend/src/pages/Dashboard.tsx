@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
-import { Dataset } from '../types';
-import { Upload, Play, Download, Trash2, LogOut } from 'lucide-react';
+import { Dataset, UserProgress } from '../types';
+import { Upload, Play, Download, Trash2, LogOut, ChevronDown, Users } from 'lucide-react';
 
 const Dashboard = () => {
     const [datasets, setDatasets] = useState<Dataset[]>([]);
@@ -11,9 +11,23 @@ const Dashboard = () => {
     const [uploading, setUploading] = useState(false);
     const navigate = useNavigate();
 
+    const [userRole, setUserRole] = useState<string>('');
+    const [progressMap, setProgressMap] = useState<Record<number, UserProgress[]>>({});
+    const [openDropdown, setOpenDropdown] = useState<number | null>(null);
+
     useEffect(() => {
+        fetchCurrentUser();
         fetchDatasets();
     }, []);
+
+    const fetchCurrentUser = async () => {
+        try {
+            const response = await api.get('/auth/me');
+            setUserRole(response.data.role);
+        } catch (err) {
+            console.error('Failed to fetch user info');
+        }
+    };
 
     const fetchDatasets = async () => {
         try {
@@ -22,6 +36,26 @@ const Dashboard = () => {
         } catch (err) {
             console.error('Failed to fetch datasets');
         }
+    };
+
+    useEffect(() => {
+        if (userRole === 'admin' && datasets.length > 0) {
+            fetchAllProgress();
+        }
+    }, [userRole, datasets.length]);
+
+    const fetchAllProgress = async () => {
+        const newMap: Record<number, UserProgress[]> = {};
+        // Fetch sequentially to avoid rate limits or getting overwhelmed, or promise.all
+        await Promise.all(datasets.map(async (ds) => {
+            try {
+                const res = await api.get(`/spreadsheet/${ds.id}/progress`);
+                newMap[ds.id] = res.data;
+            } catch (e) {
+                console.error(`Failed to fetch progress for ${ds.id}`);
+            }
+        }));
+        setProgressMap(newMap);
     };
 
     const handleUpload = async (e: React.FormEvent) => {
@@ -62,8 +96,21 @@ const Dashboard = () => {
             link.setAttribute('download', `dataset_${id}_labeled.csv`);
             document.body.appendChild(link);
             link.click();
+            window.URL.revokeObjectURL(url);
         } catch (err) {
             alert('Export failed');
+        }
+    };
+
+    const handleDelete = async (id: number) => {
+        if (!window.confirm('Are you sure you want to delete this dataset? This cannot be undone.')) return;
+
+        try {
+            await api.delete(`/datasets/${id}`);
+            fetchDatasets();
+        } catch (err: any) {
+            const message = err.response?.data?.detail || 'Delete failed';
+            alert(message);
         }
     };
 
@@ -151,6 +198,61 @@ const Dashboard = () => {
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-3">
+                                            {userRole === 'admin' && (
+                                                <button
+                                                    onClick={() => handleDelete(ds.id)}
+                                                    className="p-2 text-slate-400 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors"
+                                                    title="Delete Dataset"
+                                                >
+                                                    <Trash2 size={20} />
+                                                </button>
+                                            )}
+
+                                            {/* Admin Progress & Review Dropdown */}
+                                            {userRole === 'admin' && (
+                                                <div className="relative">
+                                                    <button
+                                                        onClick={() => setOpenDropdown(openDropdown === ds.id ? null : ds.id)}
+                                                        className="flex items-center gap-2 px-3 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-lg transition-colors text-sm font-medium"
+                                                    >
+                                                        <Users size={16} className="text-blue-400" />
+                                                        <span>{progressMap[ds.id]?.length || 0} Users</span>
+                                                        <ChevronDown size={14} className={`transition-transform ${openDropdown === ds.id ? 'rotate-180' : ''}`} />
+                                                    </button>
+
+                                                    {openDropdown === ds.id && (
+                                                        <div className="absolute top-full right-0 mt-2 w-64 bg-slate-800 border border-slate-600 rounded-xl shadow-xl z-20 overflow-hidden">
+                                                            <div className="p-3 border-b border-slate-700 bg-slate-900/50">
+                                                                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">User Progress</h4>
+                                                            </div>
+                                                            <div className="max-h-60 overflow-y-auto">
+                                                                {progressMap[ds.id]?.length ? (
+                                                                    progressMap[ds.id].map(p => (
+                                                                        <button
+                                                                            key={p.user_id}
+                                                                            onClick={() => navigate(`/spreadsheet/${ds.id}?targetUser=${p.user_id}&userName=${encodeURIComponent(p.name)}`)}
+                                                                            className="w-full text-left p-3 hover:bg-slate-700 transition-colors border-b border-slate-700/50 last:border-0"
+                                                                        >
+                                                                            <div className="flex justify-between items-center mb-1">
+                                                                                <span className="font-semibold text-sm truncate">{p.name}</span>
+                                                                                <span className="text-xs bg-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded">{p.percentage}%</span>
+                                                                            </div>
+                                                                            <div className="w-full bg-slate-700 h-1.5 rounded-full overflow-hidden">
+                                                                                <div
+                                                                                    className="bg-blue-500 h-full rounded-full transition-all"
+                                                                                    style={{ width: `${p.percentage}%` }}
+                                                                                />
+                                                                            </div>
+                                                                        </button>
+                                                                    ))
+                                                                ) : (
+                                                                    <div className="p-4 text-center text-slate-500 text-sm">No activity yet</div>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
                                             <button
                                                 onClick={() => handleExport(ds.id)}
                                                 className="p-2 text-slate-400 hover:text-primary-400 hover:bg-primary-400/10 rounded-lg transition-colors"

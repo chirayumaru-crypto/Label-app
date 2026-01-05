@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import api from '../services/api';
-import { ChevronLeft, Save, Download } from 'lucide-react';
+import { ChevronLeft, Save, Download, Eye } from 'lucide-react';
 
 interface RowData {
     id: number;
@@ -41,6 +41,10 @@ interface RowData {
 const SpreadsheetLabeling = () => {
     const { datasetId } = useParams();
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
+    const targetUserId = searchParams.get('targetUser');
+    const targetUserName = searchParams.get('userName');
+
     const [rows, setRows] = useState<RowData[]>([]);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -51,7 +55,10 @@ const SpreadsheetLabeling = () => {
 
     const fetchData = async () => {
         try {
-            const response = await api.get(`/spreadsheet/${datasetId}/rows`);
+            const endpoint = targetUserId
+                ? `/spreadsheet/${datasetId}/rows?target_user_id=${targetUserId}`
+                : `/spreadsheet/${datasetId}/rows`;
+            const response = await api.get(endpoint);
             setRows(response.data);
         } catch (err) {
             console.error('Failed to fetch data');
@@ -109,6 +116,12 @@ const SpreadsheetLabeling = () => {
 
     return (
         <div className="min-h-screen bg-white text-slate-900 flex flex-col">
+            {targetUserId && (
+                <div className="bg-amber-100 border-b border-amber-200 px-4 py-2 text-amber-800 text-sm font-medium flex items-center justify-center gap-2">
+                    <Eye size={16} />
+                    Review Mode: Viewing labels by {targetUserName || 'User'} (Read-Only)
+                </div>
+            )}
             {/* Header */}
             <header className="h-16 bg-blue-50 border-b border-blue-200 flex items-center justify-between px-6 shrink-0">
                 <div className="flex items-center gap-4">
@@ -130,8 +143,9 @@ const SpreadsheetLabeling = () => {
                     </button>
                     <button
                         onClick={handleSave}
-                        disabled={saving}
-                        className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg transition-colors disabled:opacity-50 text-white"
+                        disabled={saving || !!targetUserId}
+                        className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg transition-colors disabled:opacity-50 text-white disabled:cursor-not-allowed"
+                        title={targetUserId ? "Cannot edit in review mode" : "Save changes"}
                     >
                         <Save size={18} />
                         {saving ? 'Saving...' : 'Save All'}

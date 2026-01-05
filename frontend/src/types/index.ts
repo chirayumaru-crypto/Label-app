@@ -50,3 +50,11 @@ export interface Label {
     flag: Flag;
     reason_for_flag?: string;
 }
+
+export interface UserProgress {
+    user_id: string;
+    name: string;
+    email: string;
+    labeled_count: number;
+    percentage: number;
+}

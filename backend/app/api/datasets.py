@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, UploadFile, File, HTTPException
 from sqlalchemy.orm import Session
 from ..database import get_db
-from ..models.models import Dataset, LogRow, User
+from ..models.models import Dataset, LogRow, User, UserRole
 from ..schemas.schemas import DatasetOut
 from .auth import get_current_user
 import pandas as pd
@@ -18,9 +18,9 @@ async def upload_dataset(
     current_user: User = Depends(get_current_user)
 ):
 
-    # Restrict upload to only admin@lenskart.com
-    if current_user.email != "admin@lenskart.com":
-        raise HTTPException(status_code=403, detail="Only admin@lenskart.com can upload datasets.")
+    # Restrict upload to only admin
+    if current_user.role != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Only admins can upload datasets.")
 
     if not file.filename.endswith('.csv'):
         raise HTTPException(status_code=400, detail="Only CSV files are allowed")
@@ -130,3 +130,31 @@ def list_datasets(db: Session = Depends(get_db), current_user: User = Depends(ge
         results.append(ds)
         
     return results
+
+@router.delete("/{dataset_id}", status_code=204)
+def delete_dataset(
+    dataset_id: int, 
+    db: Session = Depends(get_db), 
+    current_user: User = Depends(get_current_user)
+):
+    if current_user.role != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Only admins can delete datasets")
+    
+    dataset = db.query(Dataset).filter(Dataset.id == dataset_id).first()
+    if not dataset:
+        raise HTTPException(status_code=404, detail="Dataset not found")
+    
+    # Cascade delete is handled by database usually, but we might need to manually delete if relationships aren't set to cascade
+    # Deleting the dataset should delete log_rows. Labels might need manual deletion if not cascaded.
+    # For now, let's assume standard SQLAlchemy cascade or manual deletion
+    
+    # Manually delete related items to be safe
+    # 1. Delete Labels
+    db.query(Label).filter(Label.log_row.has(dataset_id=dataset_id)).delete(synchronize_session=False)
+    # 2. Delete LogRows
+    db.query(LogRow).filter(LogRow.dataset_id == dataset_id).delete(synchronize_session=False)
+    # 3. Delete Dataset
+    db.delete(dataset)
+    db.commit()
+    return None
+

@@ -12,12 +12,13 @@ router = APIRouter(prefix="/export", tags=["export"])
 @router.get("/labeled_csv")
 def export_labeled_data(dataset_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     # Join LogRows with their Labels
-    query = db.query(LogRow, Label).join(Label, LogRow.id == Label.log_row_id).filter(LogRow.dataset_id == dataset_id)
+    # Join LogRows with their Labels (Outer Join to include rows without labels)
+    query = db.query(LogRow, Label).outerjoin(Label, LogRow.id == Label.log_row_id).filter(LogRow.dataset_id == dataset_id)
     
     data = []
     for log_row, label in query.all():
         row_dict = {
-            "Session_ID": log_row.session_id,
+            "Session_ID": log_row.engagement_id,
             "timestamp": log_row.timestamp,
             "R_SPH": log_row.r_sph,
             "R_CYL": log_row.r_cyl,
@@ -33,15 +34,16 @@ def export_labeled_data(dataset_id: int, db: Session = Depends(get_db), current_
             "Chart_Display": log_row.chart_display,
             "Speaker": log_row.speaker,
             "Utterance": log_row.utterance,
-            "Step": label.step,
-            "Substep": label.substep,
-            "Intent_of_Optum": label.intent_of_optum,
-            "Confidence_of_Optum": label.confidence_of_optum,
-            "Patient_Confidence_Score": label.patient_confidence_score,
-            "Flag": label.flag,
-            "Reason_For_Flag": label.reason_for_flag,
-            "Labeled_By": label.labeled_by,
-            "Labeled_At": label.created_at
+            # Label fields (handle None)
+            "Step": label.step if label else None,
+            "Substep": label.substep if label else None,
+            "Intent_of_Optum": label.intent_of_optum if label else None,
+            "Confidence_of_Optum": label.confidence_of_optum if label else None,
+            "Patient_Confidence_Score": label.patient_confidence_score if label else None,
+            "Flag": label.flag if label else None,
+            "Reason_For_Flag": label.reason_for_flag if label else None,
+            "Labeled_By": label.labeled_by if label else None,
+            "Labeled_At": label.created_at if label else None
         }
         data.append(row_dict)
     
