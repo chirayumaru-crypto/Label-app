@@ -35,7 +35,7 @@ async def upload_dataset(
     
     # Normalize columns (case-insensitive)
     expected_cols = [
-        'Engagement_ID', 'timestamp', 'Speaker', 'Utterance_Text',
+        'timestamp', 'Speaker', 'Utterance_Text',
         'R_SPH', 'R_CYL', 'R_AXIS', 'R_ADD',
         'L_SPH', 'L_CYL', 'L_AXIS', 'L_ADD',
         'PD', 'Chart_Number', 'Occluder_State', 'Chart_Display',
