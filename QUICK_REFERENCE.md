@@ -73,7 +73,7 @@ docker-compose exec backend python seed.py
 
 # Then:
 # 1. Open http://localhost:3000
-# 2. Login: admin@example.com / adminpassword
+# 2. Login: admin@example.com / ADMIN@LK
 # 3. Upload: sample_test_data.csv
 # 4. Click "Start Labeling"
 # 5. Fill green columns

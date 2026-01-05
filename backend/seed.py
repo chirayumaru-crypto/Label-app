@@ -14,7 +14,7 @@ def seed_users():
         {
             "name": "Admin User",
             "email": "admin@example.com",
-            "password": "adminpassword",
+            "password": "ADMIN@LK",
             "role": UserRole.ADMIN
         },
         {
@@ -32,7 +32,7 @@ def seed_users():
         {
             "name": "Lenskart Admin",
             "email": "admin@lenskart.com",
-            "password": "adminpassword",
+            "password": "ADMIN@LK",
             "role": UserRole.ADMIN
         }
     ]

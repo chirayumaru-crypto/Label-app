@@ -33,7 +33,7 @@ docker-compose exec backend python seed.py
 ```
 
 **Credentials:**
-- **Admin**: `admin@example.com` / `adminpassword`
+- **Admin**: `admin@example.com` / `ADMIN@LK`
 - **Labelers**: `labeler1@example.com` / `password123`, `labeler2@example.com` / `password123`
 
 ## Data Schema

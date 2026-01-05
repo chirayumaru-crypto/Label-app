@@ -58,7 +58,7 @@ I've completely redesigned the labeling interface from a **one-row-at-a-time** a
 
 ## How to Use
 
-1. **Login** (e.g., `admin@example.com` / `adminpassword`)
+1. **Login** (e.g., `admin@example.com` / `ADMIN@LK`)
 2. **Upload CSV** from Dashboard
 3. **Click "Start Labeling"** on the dataset
 4. **Fill in the green columns** for each row

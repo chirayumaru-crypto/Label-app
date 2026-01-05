@@ -163,7 +163,7 @@ docker-compose exec backend python seed.py
 ```
 
 ### Test Workflow
-1. Login: `admin@example.com` / `adminpassword`
+1. Login: `admin@example.com` / `ADMIN@LK`
 2. Upload: `sample_test_data.csv`
 3. Click: "Start Labeling"
 4. Verify: All 21 read-only columns display

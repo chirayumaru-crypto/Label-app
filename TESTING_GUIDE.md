@@ -74,7 +74,7 @@ Expected output:
 2. Click "Login"
 3. Enter credentials:
    - **Email**: `admin@example.com`
-   - **Password**: `adminpassword`
+   - **Password**: `ADMIN@LK`
 4. Click "Sign In"
 
 Expected: Redirected to Dashboard
