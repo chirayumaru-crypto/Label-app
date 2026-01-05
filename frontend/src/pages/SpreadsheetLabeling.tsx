@@ -109,10 +109,92 @@ const SpreadsheetLabeling = () => {
         );
     }
 
+    const [showGuide, setShowGuide] = useState(false);
+
+    const labelingSteps = [
+        "Step 0: Greeting & Language Preference",
+        "Step 1: History taking",
+        "Step 2: Pre-Eye Testing & detail confirmation",
+        "Step 3: Visual Acuity Assessment",
+        "Step 4: Subjective Refraction - JCC & Duochrome",
+        "Step 5: Near Vision",
+        "Step 6: New Prescription Verification",
+        "Step 7: Power Updation",
+        "Step 8: Power Explaionation",
+        "Step 9: Handover"
+    ];
+
     const displayValue = (value: string) => {
         if (value === 'nan' || value === '' || !value) return '';
         return value;
     };
+
+    const LabelingGuideModal = () => (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+                <div className="p-6 border-b border-slate-200 flex justify-between items-center sticky top-0 bg-white">
+                    <h2 className="text-2xl font-bold text-slate-900">Labeling Guide</h2>
+                    <button onClick={() => setShowGuide(false)} className="text-slate-500 hover:text-slate-700">Close</button>
+                </div>
+                <div className="p-6 space-y-6">
+                    <section>
+                        <h3 className="text-lg font-bold text-blue-600 mb-3">Labeling Steps</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                            {labelingSteps.map((step, idx) => (
+                                <div key={idx} className="p-2 bg-slate-50 rounded border border-slate-200 text-sm font-medium">
+                                    {step}
+                                </div>
+                            ))}
+                        </div>
+                    </section>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <section className="bg-blue-50 p-4 rounded-lg">
+                            <h3 className="font-bold text-blue-800 mb-2">Intent & Confidence</h3>
+                            <ul className="text-sm space-y-2 text-blue-900">
+                                <li><strong>Substep:</strong> Description of the step performed.</li>
+                                <li><strong>Intent of Optum:</strong> What is Optum thinking/doing?</li>
+                                <li><strong>Confidence (Optum):</strong> 1-10 scale (1=Lowest, 10=Highest).</li>
+                                <li><strong>Patient Confidence:</strong> 1-10 scale (Accuracy of patient reply).</li>
+                            </ul>
+                        </section>
+
+                        <section className="bg-emerald-50 p-4 rounded-lg">
+                            <h3 className="font-bold text-emerald-800 mb-2">Flags</h3>
+                            <ul className="text-sm space-y-2 text-emerald-900">
+                                <li className="flex items-center gap-2">
+                                    <span className="w-3 h-3 rounded-full bg-green-500"></span>
+                                    <span><strong>Green:</strong> Compulsory steps.</span>
+                                </li>
+                                <li className="flex items-center gap-2">
+                                    <span className="w-3 h-3 rounded-full bg-yellow-500"></span>
+                                    <span><strong>Yellow:</strong> Steps can be ignored.</span>
+                                </li>
+                                <li className="flex items-center gap-2">
+                                    <span className="w-3 h-3 rounded-full bg-red-500"></span>
+                                    <span><strong>Red:</strong> Step to be excluded/not part of test.</span>
+                                </li>
+                            </ul>
+                        </section>
+                        <section className="bg-gray-50 p-4 rounded-lg">
+                            <h3 className="font-bold text-gray-800 mb-2">Column Definitions</h3>
+                            <p className="text-sm text-gray-700">
+                                <strong>Reason For Flag:</strong> Mark your reason for the chosen flag.
+                            </p>
+                        </section>
+                    </div>
+                </div>
+                <div className="p-4 border-t border-slate-200 bg-slate-50 flex justify-end">
+                    <button
+                        onClick={() => setShowGuide(false)}
+                        className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold"
+                    >
+                        Got it
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
 
     return (
         <div className="min-h-screen bg-white text-slate-900 flex flex-col">
@@ -132,6 +214,13 @@ const SpreadsheetLabeling = () => {
                         <ChevronLeft size={24} />
                     </button>
                     <h1 className="font-bold text-lg">Spreadsheet Labeling</h1>
+                    <button
+                        onClick={() => setShowGuide(true)}
+                        className="ml-4 px-3 py-1 bg-white border border-blue-300 text-blue-600 rounded-md text-sm font-semibold hover:bg-blue-50 flex items-center gap-2"
+                    >
+                        <Download size={14} className="rotate-180" /> {/* Using icon as 'File' substitute */}
+                        View Guide
+                    </button>
                 </div>
                 <div className="flex items-center gap-3">
                     <button
@@ -152,6 +241,8 @@ const SpreadsheetLabeling = () => {
                     </button>
                 </div>
             </header>
+
+            {showGuide && <LabelingGuideModal />}
 
             {/* Spreadsheet */}
             <div className="flex-1 overflow-auto p-4">
@@ -220,12 +311,16 @@ const SpreadsheetLabeling = () => {
 
                                     {/* Editable cells */}
                                     <td className="border border-slate-300 px-1 py-1">
-                                        <input
-                                            type="text"
+                                        <select
                                             value={row.step}
                                             onChange={(e) => handleCellChange(row.id, 'step', e.target.value)}
-                                            className="w-full bg-green-50 border-0 px-2 py-1 text-slate-900 focus:outline-none focus:ring-1 focus:ring-green-500"
-                                        />
+                                            className="w-full bg-green-50 border-0 px-2 py-1 text-slate-900 focus:outline-none focus:ring-1 focus:ring-green-500 text-xs"
+                                        >
+                                            <option value="">Select Step</option>
+                                            {labelingSteps.map(step => (
+                                                <option key={step} value={step}>{step}</option>
+                                            ))}
+                                        </select>
                                     </td>
                                     <td className="border border-slate-300 px-1 py-1">
                                         <input
@@ -233,6 +328,7 @@ const SpreadsheetLabeling = () => {
                                             value={row.substep}
                                             onChange={(e) => handleCellChange(row.id, 'substep', e.target.value)}
                                             className="w-full bg-green-50 border-0 px-2 py-1 text-slate-900 focus:outline-none focus:ring-1 focus:ring-green-500"
+                                            placeholder="Desc..."
                                         />
                                     </td>
                                     <td className="border border-slate-300 px-1 py-1">
@@ -244,26 +340,37 @@ const SpreadsheetLabeling = () => {
                                         />
                                     </td>
                                     <td className="border border-slate-300 px-1 py-1">
-                                        <input
-                                            type="text"
+                                        <select
                                             value={row.confidence_of_optum}
                                             onChange={(e) => handleCellChange(row.id, 'confidence_of_optum', e.target.value)}
-                                            className="w-full bg-green-50 border-0 px-2 py-1 text-slate-900 focus:outline-none focus:ring-1 focus:ring-green-500"
-                                        />
+                                            className="w-full bg-green-50 border-0 px-2 py-1 text-slate-900 focus:outline-none focus:ring-1 focus:ring-green-500 text-center"
+                                        >
+                                            <option value="">-</option>
+                                            {Array.from({ length: 10 }, (_, i) => i + 1).map(num => (
+                                                <option key={num} value={num}>{num}</option>
+                                            ))}
+                                        </select>
                                     </td>
                                     <td className="border border-slate-300 px-1 py-1">
-                                        <input
-                                            type="text"
+                                        <select
                                             value={row.patient_confidence_score}
                                             onChange={(e) => handleCellChange(row.id, 'patient_confidence_score', e.target.value)}
-                                            className="w-full bg-green-50 border-0 px-2 py-1 text-slate-900 focus:outline-none focus:ring-1 focus:ring-green-500"
-                                        />
+                                            className="w-full bg-green-50 border-0 px-2 py-1 text-slate-900 focus:outline-none focus:ring-1 focus:ring-green-500 text-center"
+                                        >
+                                            <option value="">-</option>
+                                            {Array.from({ length: 10 }, (_, i) => i + 1).map(num => (
+                                                <option key={num} value={num}>{num}</option>
+                                            ))}
+                                        </select>
                                     </td>
                                     <td className="border border-slate-300 px-1 py-1">
                                         <select
                                             value={row.flag}
                                             onChange={(e) => handleCellChange(row.id, 'flag', e.target.value)}
-                                            className="w-full bg-green-50 border-0 px-2 py-1 text-slate-900 focus:outline-none focus:ring-1 focus:ring-green-500"
+                                            className={`w-full border-0 px-2 py-1 text-slate-900 focus:outline-none focus:ring-1 focus:ring-green-500 font-bold ${row.flag === 'GREEN' ? 'bg-green-200 text-green-800' :
+                                                    row.flag === 'YELLOW' ? 'bg-yellow-200 text-yellow-800' :
+                                                        row.flag === 'RED' ? 'bg-red-200 text-red-800' : 'bg-green-50'
+                                                }`}
                                         >
                                             <option value="">-</option>
                                             <option value="GREEN">GREEN</option>
