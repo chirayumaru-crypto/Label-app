@@ -220,11 +220,7 @@ const SpreadsheetLabeling = () => {
                 ? `/spreadsheet/${datasetId}/rows?target_user_id=${targetUserId}`
                 : `/spreadsheet/${datasetId}/rows`;
             const response = await api.get(endpoint);
-            // Filter out Patient rows on client-side for consistent behavior across all datasets
-            const filteredRows = response.data.filter((r: any) =>
-                r.speaker?.toLowerCase() !== 'patient'
-            );
-            setRows(filteredRows);
+            setRows(response.data);
         } catch (err) {
             console.error('Failed to fetch data');
         } finally {
@@ -371,7 +367,6 @@ const SpreadsheetLabeling = () => {
                                 <th className="sticky left-[600px] z-20 border border-slate-300 px-2 py-1.5 text-left bg-blue-200 text-slate-900 min-w-[80px]">Chart_Num</th>
                                 <th className="sticky left-[680px] z-20 border border-slate-300 px-2 py-1.5 text-left bg-blue-200 text-slate-900 min-w-[90px]">Occluder</th>
                                 <th className="sticky left-[770px] z-20 border border-slate-300 px-2 py-1.5 text-left bg-blue-200 text-slate-900 min-w-[150px]">Chart_Display</th>
-                                <th className="border border-slate-300 px-2 py-1.5 text-left bg-blue-100 text-slate-900">Speaker</th>
 
                                 {/* Editable columns */}
                                 <th className="border border-slate-300 px-2 py-1.5 text-left bg-purple-100 text-slate-900">Step</th>
@@ -414,7 +409,6 @@ const SpreadsheetLabeling = () => {
                                         <td className={getCellClass('chart_number', 'left-[600px] min-w-[80px]')}>{displayValue(currentRow.chart_number)}</td>
                                         <td className={getCellClass('occluder_state', 'left-[680px] min-w-[90px]')}>{displayValue(currentRow.occluder_state)}</td>
                                         <td className={getCellClass('chart_display', 'left-[770px] min-w-[150px]')}>{displayValue(currentRow.chart_display)}</td>
-                                        <td className={`border border-slate-300 px-2 py-1.5 ${getRowBackgroundColor(currentRow)} text-slate-700 font-medium`}>{displayValue(currentRow.speaker)}</td>
 
                                         {/* Editable cells */}
                                         <td className="border border-slate-300 px-1 py-1">
