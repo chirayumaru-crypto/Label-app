@@ -207,10 +207,22 @@ const SpreadsheetLabeling = () => {
         }
     };
 
-    const handleCellChange = (rowId: number, field: keyof RowData, value: string) => {
-        setRows(rows.map(row =>
+    const handleCellChange = async (rowId: number, field: keyof RowData, value: string) => {
+        const updatedRows = rows.map(row =>
             row.id === rowId ? { ...row, [field]: value } : row
-        ));
+        );
+        setRows(updatedRows);
+
+        // Auto-save the specific row
+        const rowToSave = updatedRows.find(r => r.id === rowId);
+        if (rowToSave && !targetUserId) {
+            try {
+                // We don't wait for this to let the UI stay snappy
+                api.post(`/spreadsheet/${datasetId}/save_row`, rowToSave);
+            } catch (err) {
+                console.error('Auto-save failed', err);
+            }
+        }
     };
 
     const handleSave = async () => {
@@ -281,6 +293,10 @@ const SpreadsheetLabeling = () => {
                         <HelpCircle size={18} />
                         {showGuide ? 'Hide Guide' : 'Show Guide'}
                     </button>
+                    <div className="flex items-center gap-2 px-3 py-1 bg-green-50 text-green-700 text-xs font-bold rounded-full border border-green-200 animate-pulse">
+                        <Save size={14} />
+                        Auto-saving Live
+                    </div>
                     <button
                         onClick={handleExport}
                         className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors text-white"
@@ -291,11 +307,11 @@ const SpreadsheetLabeling = () => {
                     <button
                         onClick={handleSave}
                         disabled={saving || !!targetUserId}
-                        className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg transition-colors disabled:opacity-50 text-white disabled:cursor-not-allowed"
-                        title={targetUserId ? "Cannot edit in review mode" : "Save changes"}
+                        className="flex items-center gap-2 px-4 py-2 bg-slate-200 hover:bg-slate-300 rounded-lg transition-colors disabled:opacity-50 text-slate-700 disabled:cursor-not-allowed"
+                        title={targetUserId ? "Cannot edit in review mode" : "Manual Save sync"}
                     >
                         <Save size={18} />
-                        {saving ? 'Saving...' : 'Save All'}
+                        {saving ? 'Saving...' : 'Manual Sync'}
                     </button>
                 </div>
             </header>

@@ -39,9 +39,20 @@ const Dashboard = () => {
     };
 
     useEffect(() => {
+        let interval: any;
+
         if (userRole === 'admin' && datasets.length > 0) {
             fetchAllProgress();
+            // Start polling every 5 seconds for real-time admin view
+            interval = setInterval(() => {
+                fetchAllProgress();
+                fetchDatasets(); // Also refresh dataset totals
+            }, 5000);
         }
+
+        return () => {
+            if (interval) clearInterval(interval);
+        };
     }, [userRole, datasets.length]);
 
     const fetchAllProgress = async () => {

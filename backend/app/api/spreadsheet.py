@@ -152,6 +152,42 @@ def save_labels(dataset_id: int, request: SaveLabelsRequest, db: Session = Depen
     db.commit()
     return {"status": "success", "message": "Labels saved successfully"}
 
+@router.post("/{dataset_id}/save_row")
+def save_single_row(dataset_id: int, row_data: SpreadsheetRow, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """Save a single label from spreadsheet in real-time"""
+    # Check if label already exists
+    existing_label = db.query(Label).filter(
+        Label.log_row_id == row_data.id,
+        Label.labeled_by == current_user.id
+    ).first()
+    
+    if existing_label:
+        # Update existing
+        existing_label.step = row_data.step
+        existing_label.substep = row_data.substep
+        existing_label.intent_of_optum = row_data.intent_of_optum
+        existing_label.confidence_of_optum = int(row_data.confidence_of_optum) if row_data.confidence_of_optum else 0
+        existing_label.patient_confidence_score = int(row_data.patient_confidence_score) if row_data.patient_confidence_score else 0
+        existing_label.flag = row_data.flag if row_data.flag else "NONE"
+        existing_label.reason_for_flag = row_data.reason_for_flag
+    else:
+        # Create new
+        new_label = Label(
+            log_row_id=row_data.id,
+            labeled_by=current_user.id,
+            step=row_data.step,
+            substep=row_data.substep,
+            intent_of_optum=row_data.intent_of_optum,
+            confidence_of_optum=int(row_data.confidence_of_optum) if row_data.confidence_of_optum else 0,
+            patient_confidence_score=int(row_data.patient_confidence_score) if row_data.patient_confidence_score else 0,
+            flag=row_data.flag if row_data.flag else "NONE",
+            reason_for_flag=row_data.reason_for_flag
+        )
+        db.add(new_label)
+
+    db.commit()
+    return {"status": "success", "message": "Row saved"}
+
 @router.get("/{dataset_id}/export")
 def export_dataset(dataset_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """Export dataset with labels as CSV"""
