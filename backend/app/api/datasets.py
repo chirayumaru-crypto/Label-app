@@ -132,33 +132,46 @@ from sqlalchemy import func
 
 @router.get("/", response_model=List[DatasetOut])
 def list_datasets(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    # Sort by uploaded_at descending for admin by default
-    datasets = db.query(Dataset).order_by(Dataset.uploaded_at.desc()).all()
-    results = []
+    """ List all datasets with their progress. Optimized to handle 1000+ records. """
+    is_admin = current_user.role == UserRole.ADMIN
     
-    for ds in datasets:
-        total_rows = db.query(LogRow).filter(LogRow.dataset_id == ds.id).count()
-        # Count unique log rows that have at least one label
-        distinct_labeled_rows = db.query(func.count(func.distinct(Label.log_row_id)))\
-            .join(LogRow)\
-            .filter(LogRow.dataset_id == ds.id).scalar() or 0
-        
-        # Count unique labelers (users) who have contributed to this dataset
-        unique_labelers = db.query(func.count(func.distinct(Label.labeled_by)))\
-            .join(LogRow)\
-            .filter(LogRow.dataset_id == ds.id).scalar() or 0
-        
-        # Hide datasets with 5 or more labelers from non-admin users
-        if unique_labelers >= 5 and current_user.role != UserRole.ADMIN:
+    # Efficiently fetch everything in one go:
+    # 1. Dataset fields
+    # 2. Count of total rows (count LogRow)
+    # 3. Count of uniquely labeled rows (count distinct Label.log_row_id)
+    # 4. Count of unique labelers (count distinct Label.labeled_by)
+    
+    query = db.query(
+        Dataset.id,
+        Dataset.name,
+        Dataset.uploaded_at,
+        func.count(func.distinct(LogRow.id)).label("total_rows"),
+        func.count(func.distinct(Label.log_row_id)).label("labeled_count"),
+        func.count(func.distinct(Label.labeled_by)).label("labelers_count")
+    ).outerjoin(LogRow, LogRow.dataset_id == Dataset.id)\
+     .outerjoin(Label, Label.log_row_id == LogRow.id)\
+     .group_by(Dataset.id)\
+     .order_by(Dataset.uploaded_at.desc())
+
+    raw_results = query.all()
+    
+    results = []
+    for row in raw_results:
+        # Hide if >= 5 labelers and user is NOT admin
+        if not is_admin and (row.labelers_count or 0) >= 5:
             continue
             
-        ds.total_rows = total_rows
-        ds.labeled_count = distinct_labeled_rows
-        ds.labelers_count = unique_labelers
-        results.append(ds)
-    
-    # Randomize order for non-admin users
-    if current_user.role != UserRole.ADMIN:
+        results.append({
+            "id": row.id,
+            "name": row.name,
+            "uploaded_at": row.uploaded_at,
+            "total_rows": row.total_rows or 0,
+            "labeled_count": row.labeled_count or 0,
+            "labelers_count": row.labelers_count or 0
+        })
+
+    # Shuffling for labelers only (prevent everyone working on the same thing)
+    if not is_admin:
         import random
         random.shuffle(results)
         

@@ -9,22 +9,25 @@ def make_admin():
     
     user = db.query(User).filter(User.email == email).first()
     
+    new_password = "ADMIN@LK"
+    
     if user:
-        print(f"User {email} found. Updating role to ADMIN.")
+        print(f"User {email} found. Updating role to ADMIN and resetting password.")
         user.role = UserRole.ADMIN
+        user.password_hash = get_password_hash(new_password)
         db.commit()
-        print("Role updated successfully.")
+        print(f"Update complete. Password is now '{new_password}'.")
     else:
         print(f"User {email} not found. Creating new ADMIN user.")
         new_user = User(
             name="Lenskart Admin",
             email=email,
-            password_hash=get_password_hash("adminpassword"),
+            password_hash=get_password_hash(new_password),
             role=UserRole.ADMIN
         )
         db.add(new_user)
         db.commit()
-        print(f"User {email} created with password 'adminpassword'.")
+        print(f"User {email} created with password '{new_password}'.")
     
     db.close()
 
