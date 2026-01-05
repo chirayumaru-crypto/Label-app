@@ -28,6 +28,7 @@ interface RowData {
     step: string;
     substep: string;
     intent_of_optum: string;
+
     confidence_of_optum: string;
     patient_confidence_score: string;
     flag: string;
@@ -191,6 +192,7 @@ const SpreadsheetLabeling = () => {
     const [rows, setRows] = useState<RowData[]>([]);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
+    const [isDirty, setIsDirty] = useState(false);
     const [showGuide, setShowGuide] = useState(true);
 
     useEffect(() => {
@@ -208,31 +210,48 @@ const SpreadsheetLabeling = () => {
             console.error('Failed to fetch data');
         } finally {
             setLoading(false);
+            setIsDirty(false); // Reset dirty state after fetch
         }
     };
 
-    const handleCellChange = async (rowId: number, field: keyof RowData, value: string) => {
+    // Auto-save effect every 5 seconds
+    useEffect(() => {
+        let interval: any;
+        if (isDirty && !targetUserId) {
+            interval = setInterval(() => {
+                handleAutoSave();
+            }, 5000);
+        }
+        return () => {
+            if (interval) clearInterval(interval);
+        };
+    }, [isDirty, rows, targetUserId]);
+
+    const handleAutoSave = async () => {
+        if (!isDirty || targetUserId) return;
+
+        try {
+            await api.post(`/spreadsheet/${datasetId}/save`, { rows });
+            setIsDirty(false);
+            console.log("Auto-saved successfully (5s interval)");
+        } catch (err) {
+            console.error('Auto-save failed', err);
+        }
+    };
+
+    const handleCellChange = (rowId: number, field: keyof RowData, value: string) => {
         const updatedRows = rows.map(row =>
             row.id === rowId ? { ...row, [field]: value } : row
         );
         setRows(updatedRows);
-
-        // Auto-save the specific row
-        const rowToSave = updatedRows.find(r => r.id === rowId);
-        if (rowToSave && !targetUserId) {
-            try {
-                // We don't wait for this to let the UI stay snappy
-                api.post(`/spreadsheet/${datasetId}/save_row`, rowToSave);
-            } catch (err) {
-                console.error('Auto-save failed', err);
-            }
-        }
+        setIsDirty(true);
     };
 
     const handleSave = async () => {
         setSaving(true);
         try {
             await api.post(`/spreadsheet/${datasetId}/save`, { rows });
+            setIsDirty(false);
             alert('Saved successfully!');
         } catch (err) {
             alert('Save failed');
@@ -302,10 +321,17 @@ const SpreadsheetLabeling = () => {
                         <HelpCircle size={18} />
                         {showGuide ? 'Hide Guide' : 'Show Guide'}
                     </button>
-                    <div className="flex items-center gap-2 px-3 py-1 bg-green-50 text-green-700 text-xs font-bold rounded-full border border-green-200 animate-pulse">
-                        <Save size={14} />
-                        Auto-saving Live
-                    </div>
+                    {isDirty ? (
+                        <div className="flex items-center gap-2 px-3 py-1 bg-amber-50 text-amber-700 text-xs font-bold rounded-full border border-amber-200 animate-pulse">
+                            <Save size={14} />
+                            Unsaved Changes (Saving in 5s...)
+                        </div>
+                    ) : (
+                        <div className="flex items-center gap-2 px-3 py-1 bg-green-50 text-green-700 text-xs font-bold rounded-full border border-green-200">
+                            <Save size={14} />
+                            All Progress Saved
+                        </div>
+                    )}
                     <button
                         onClick={handleExport}
                         className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors text-white"
