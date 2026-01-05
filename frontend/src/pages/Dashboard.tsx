@@ -131,46 +131,48 @@ const Dashboard = () => {
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    {/* Upload Panel */}
-                    <div className="bg-slate-800 p-6 rounded-2xl border border-slate-700 h-fit">
-                        <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
-                            <Upload size={20} className="text-primary-400" />
-                            Upload New Dataset
-                        </h2>
-                        <form onSubmit={handleUpload} className="space-y-4">
-                            <div>
-                                <label className="block text-sm text-slate-400 mb-1">Dataset Name</label>
-                                <input
-                                    type="text"
-                                    value={datasetName}
-                                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setDatasetName(e.target.value)}
-                                    className="w-full bg-slate-900 border border-slate-700 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-primary-500"
-                                    placeholder="Eye Test Log - Batch A"
-                                    required
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm text-slate-400 mb-1">CSV File</label>
-                                <input
-                                    type="file"
-                                    accept=".csv"
-                                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFile(e.target.files?.[0] || null)}
-                                    className="w-full text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-primary-600 file:text-white hover:file:bg-primary-500"
-                                    required
-                                />
-                            </div>
-                            <button
-                                type="submit"
-                                disabled={uploading}
-                                className="w-full bg-primary-600 hover:bg-primary-500 text-white font-bold py-3 rounded-lg transition-colors disabled:opacity-50"
-                            >
-                                {uploading ? 'Uploading...' : 'Upload'}
-                            </button>
-                        </form>
-                    </div>
+                    {/* Upload Panel - Only visible to admin */}
+                    {userRole === 'admin' && (
+                        <div className="bg-slate-800 p-6 rounded-2xl border border-slate-700 h-fit">
+                            <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
+                                <Upload size={20} className="text-primary-400" />
+                                Upload New Dataset
+                            </h2>
+                            <form onSubmit={handleUpload} className="space-y-4">
+                                <div>
+                                    <label className="block text-sm text-slate-400 mb-1">Dataset Name</label>
+                                    <input
+                                        type="text"
+                                        value={datasetName}
+                                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setDatasetName(e.target.value)}
+                                        className="w-full bg-slate-900 border border-slate-700 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                                        placeholder="Eye Test Log - Batch A"
+                                        required
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm text-slate-400 mb-1">CSV File</label>
+                                    <input
+                                        type="file"
+                                        accept=".csv"
+                                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFile(e.target.files?.[0] || null)}
+                                        className="w-full text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-primary-600 file:text-white hover:file:bg-primary-500"
+                                        required
+                                    />
+                                </div>
+                                <button
+                                    type="submit"
+                                    disabled={uploading}
+                                    className="w-full bg-primary-600 hover:bg-primary-500 text-white font-bold py-3 rounded-lg transition-colors disabled:opacity-50"
+                                >
+                                    {uploading ? 'Uploading...' : 'Upload'}
+                                </button>
+                            </form>
+                        </div>
+                    )}
 
-                    {/* List Panel */}
-                    <div className="lg:col-span-2 bg-slate-800 p-6 rounded-2xl border border-slate-700">
+                    {/* List Panel - Spans full width if not admin */}
+                    <div className={`${userRole === 'admin' ? 'lg:col-span-2' : 'lg:col-span-3'} bg-slate-800 p-6 rounded-2xl border border-slate-700`}>
                         <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
                             <Play size={20} className="text-emerald-400" />
                             Available Datasets
