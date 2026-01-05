@@ -342,9 +342,7 @@ const SpreadsheetLabeling = () => {
                                 <th className="border border-slate-300 px-3 py-2 text-left bg-blue-100 text-slate-900">Chart_Number</th>
                                 <th className="border border-slate-300 px-3 py-2 text-left bg-blue-100 text-slate-900">Occluder_State</th>
                                 <th className="border border-slate-300 px-3 py-2 text-left bg-blue-100 text-slate-900">Chart_Display</th>
-                                <th className="border border-slate-300 px-3 py-2 text-left bg-blue-100 text-slate-900">Translation_in_En</th>
                                 <th className="border border-slate-300 px-3 py-2 text-left bg-blue-100 text-slate-900">Speaker</th>
-                                <th className="border border-slate-300 px-3 py-2 text-left bg-blue-100 text-slate-900">Utterance_Text</th>
 
                                 {/* Editable columns */}
                                 <th className="border border-slate-300 px-3 py-2 text-left bg-purple-100 text-slate-900">Step</th>
@@ -374,9 +372,7 @@ const SpreadsheetLabeling = () => {
                                     <td className={`border border-slate-300 px-3 py-2 ${getRowBackgroundColor(row.flag)} text-slate-700`}>{displayValue(row.chart_number)}</td>
                                     <td className={`border border-slate-300 px-3 py-2 ${getRowBackgroundColor(row.flag)} text-slate-700`}>{displayValue(row.occluder_state)}</td>
                                     <td className={`border border-slate-300 px-3 py-2 ${getRowBackgroundColor(row.flag)} text-slate-700`}>{displayValue(row.chart_display)}</td>
-                                    <td className={`border border-slate-300 px-3 py-2 ${getRowBackgroundColor(row.flag)} text-slate-700 max-w-xs truncate`}>{displayValue(row.translation_in_en)}</td>
                                     <td className={`border border-slate-300 px-3 py-2 ${getRowBackgroundColor(row.flag)} text-slate-700`}>{displayValue(row.speaker)}</td>
-                                    <td className={`border border-slate-300 px-3 py-2 ${getRowBackgroundColor(row.flag)} text-slate-700 max-w-xs truncate`}>{displayValue(row.utterance_text)}</td>
 
                                     {/* Editable cells */}
                                     <td className="border border-slate-300 px-1 py-1">
