@@ -146,8 +146,29 @@ const LabelingGuide = ({ onClose }: { onClose: () => void }) => (
 );
 
 // Get row background color based on flag
-const getRowBackgroundColor = (flag: string): string => {
-    switch (flag) {
+// Check if a row matches the baseline default values
+const isDefaultClinicalRow = (row: RowData): boolean => {
+    return (
+        row.r_sph === "0.0" &&
+        row.r_cyl === "0.0" &&
+        row.r_axis === "180.0" &&
+        row.r_add === "0.0" &&
+        row.l_sph === "0.0" &&
+        row.l_cyl === "0.0" &&
+        row.l_axis === "180.0" &&
+        row.l_add === "0.0" &&
+        row.pd === "64.0" &&
+        row.chart_number === "Chart1" &&
+        row.occluder_state === "Bino" &&
+        row.chart_display === "Large black 'E' in a white box"
+    );
+};
+
+// Get row background color based on flag and default row status
+const getRowBackgroundColor = (row: RowData): string => {
+    if (isDefaultClinicalRow(row)) return 'bg-blue-50';
+
+    switch (row.flag) {
         case 'GREEN':
             return 'bg-green-50';
         case 'YELLOW':
@@ -160,9 +181,11 @@ const getRowBackgroundColor = (flag: string): string => {
     }
 };
 
-// Get cell background for editable cells based on flag
-const getEditableCellBg = (flag: string): string => {
-    switch (flag) {
+// Get cell background for editable cells based on flag and default row status
+const getEditableCellBg = (row: RowData): string => {
+    if (isDefaultClinicalRow(row)) return 'bg-blue-100';
+
+    switch (row.flag) {
         case 'GREEN':
             return 'bg-green-100';
         case 'YELLOW':
@@ -331,65 +354,75 @@ const SpreadsheetLabeling = () => {
             {/* Spreadsheet */}
             <div className="flex-1 overflow-auto p-4">
                 <div className="inline-block min-w-full">
-                    <table className="border-collapse border border-slate-300 text-sm">
+                    <table className="border-collapse border border-slate-300 text-xs">
                         <thead className="sticky top-0 bg-blue-100 z-10">
                             <tr>
-                                {/* Read-only columns */}
-                                <th className="border border-slate-300 px-3 py-2 text-left bg-blue-100 text-slate-900">Timestamp</th>
-                                <th className="border border-slate-300 px-3 py-2 text-left bg-blue-100 text-slate-900">R_SPH</th>
-                                <th className="border border-slate-300 px-3 py-2 text-left bg-blue-100 text-slate-900">R_CYL</th>
-                                <th className="border border-slate-300 px-3 py-2 text-left bg-blue-100 text-slate-900">R_AXIS</th>
-                                <th className="border border-slate-300 px-3 py-2 text-left bg-blue-100 text-slate-900">R_ADD</th>
-                                <th className="border border-slate-300 px-3 py-2 text-left bg-blue-100 text-slate-900">L_SPH</th>
-                                <th className="border border-slate-300 px-3 py-2 text-left bg-blue-100 text-slate-900">L_CYL</th>
-                                <th className="border border-slate-300 px-3 py-2 text-left bg-blue-100 text-slate-900">L_AXIS</th>
-                                <th className="border border-slate-300 px-3 py-2 text-left bg-blue-100 text-slate-900">L_ADD</th>
-                                <th className="border border-slate-300 px-3 py-2 text-left bg-blue-100 text-slate-900">PD</th>
-                                <th className="border border-slate-300 px-3 py-2 text-left bg-blue-100 text-slate-900">Chart_Number</th>
-                                <th className="border border-slate-300 px-3 py-2 text-left bg-blue-100 text-slate-900">Occluder_State</th>
-                                <th className="border border-slate-300 px-3 py-2 text-left bg-blue-100 text-slate-900">Chart_Display</th>
-                                <th className="border border-slate-300 px-3 py-2 text-left bg-blue-100 text-slate-900">Speaker</th>
+                                {/* Read-only columns - Sticky up to Chart Display */}
+                                <th className="sticky left-0 z-20 border border-slate-300 px-2 py-1.5 text-left bg-blue-200 text-slate-900 min-w-[70px]">Timestamp</th>
+                                <th className="sticky left-[70px] z-20 border border-slate-300 px-2 py-1.5 text-left bg-blue-200 text-slate-900 min-w-[60px]">R_SPH</th>
+                                <th className="sticky left-[130px] z-20 border border-slate-300 px-2 py-1.5 text-left bg-blue-200 text-slate-900 min-w-[60px]">R_CYL</th>
+                                <th className="sticky left-[190px] z-20 border border-slate-300 px-2 py-1.5 text-left bg-blue-200 text-slate-900 min-w-[60px]">R_AXIS</th>
+                                <th className="sticky left-[250px] z-20 border border-slate-300 px-2 py-1.5 text-left bg-blue-200 text-slate-900 min-w-[60px]">R_ADD</th>
+                                <th className="sticky left-[310px] z-20 border border-slate-300 px-2 py-1.5 text-left bg-blue-200 text-slate-900 min-w-[60px]">L_SPH</th>
+                                <th className="sticky left-[370px] z-20 border border-slate-300 px-2 py-1.5 text-left bg-blue-200 text-slate-900 min-w-[60px]">L_CYL</th>
+                                <th className="sticky left-[430px] z-20 border border-slate-300 px-2 py-1.5 text-left bg-blue-200 text-slate-900 min-w-[60px]">L_AXIS</th>
+                                <th className="sticky left-[490px] z-20 border border-slate-300 px-2 py-1.5 text-left bg-blue-200 text-slate-900 min-w-[60px]">L_ADD</th>
+                                <th className="sticky left-[550px] z-20 border border-slate-300 px-2 py-1.5 text-left bg-blue-200 text-slate-900 min-w-[50px]">PD</th>
+                                <th className="sticky left-[600px] z-20 border border-slate-300 px-2 py-1.5 text-left bg-blue-200 text-slate-900 min-w-[80px]">Chart_Num</th>
+                                <th className="sticky left-[680px] z-20 border border-slate-300 px-2 py-1.5 text-left bg-blue-200 text-slate-900 min-w-[90px]">Occluder</th>
+                                <th className="sticky left-[770px] z-20 border border-slate-300 px-2 py-1.5 text-left bg-blue-200 text-slate-900 min-w-[150px]">Chart_Display</th>
+                                <th className="border border-slate-300 px-2 py-1.5 text-left bg-blue-100 text-slate-900">Speaker</th>
 
                                 {/* Editable columns */}
-                                <th className="border border-slate-300 px-3 py-2 text-left bg-purple-100 text-slate-900">Step</th>
-                                <th className="border border-slate-300 px-3 py-2 text-left bg-purple-100 text-slate-900">Substep</th>
-                                <th className="border border-slate-300 px-3 py-2 text-left bg-purple-100 text-slate-900">Intent_of_Optum</th>
-                                <th className="border border-slate-300 px-3 py-2 text-left bg-purple-100 text-slate-900">Confidence_of_Optum</th>
-                                <th className="border border-slate-300 px-3 py-2 text-left bg-purple-100 text-slate-900">Patient_Confidence_Score</th>
-                                <th className="border border-slate-300 px-3 py-2 text-left bg-purple-100 text-slate-900">Flag</th>
-                                <th className="border border-slate-300 px-3 py-2 text-left bg-purple-100 text-slate-900">Reason_For_Flag</th>
+                                <th className="border border-slate-300 px-2 py-1.5 text-left bg-purple-100 text-slate-900">Step</th>
+                                <th className="border border-slate-300 px-2 py-1.5 text-left bg-purple-100 text-slate-900">Substep</th>
+                                <th className="border border-slate-300 px-2 py-1.5 text-left bg-purple-100 text-slate-900">Intent_of_Optum</th>
+                                <th className="border border-slate-300 px-2 py-1.5 text-left bg-purple-100 text-slate-900">Confidence_of_Optum</th>
+                                <th className="border border-slate-300 px-2 py-1.5 text-left bg-purple-100 text-slate-900">Patient_Confidence_Score</th>
+                                <th className="border border-slate-300 px-2 py-1.5 text-left bg-purple-100 text-slate-900">Flag</th>
+                                <th className="border border-slate-300 px-2 py-1.5 text-left bg-purple-100 text-slate-900">Reason_For_Flag</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {rows.map((row, index) => {
+                            {rows.map((currentRow, index) => {
                                 const prevRow = index > 0 ? rows[index - 1] : null;
-                                const isDiff = (field: keyof RowData) => prevRow && row[field] !== prevRow[field];
+                                const isDiff = (field: keyof RowData) => prevRow && currentRow[field] !== prevRow[field];
+
+                                // Helper to get cell class with highlighting
+                                const getCellClass = (field: keyof RowData, stickyOffset?: string) => {
+                                    const base = "border border-slate-300 px-2 py-1.5 transition-colors duration-200";
+                                    const stickyClass = stickyOffset ? `sticky z-10 ${stickyOffset}` : "";
+                                    const highlight = isDiff(field)
+                                        ? "bg-amber-100 font-bold text-amber-900 shadow-[inset_0_0_0_1px_rgba(251,191,36,0.2)]"
+                                        : `${getRowBackgroundColor(currentRow)} text-slate-700`;
+                                    return `${base} ${stickyClass} ${highlight}`;
+                                };
 
                                 return (
-                                    <tr key={row.id} className={`${getRowBackgroundColor(row.flag)} hover:opacity-80 transition-opacity`}>
-                                        {/* Read-only cells */}
-                                        <td className={`border border-slate-300 px-3 py-2 ${getRowBackgroundColor(row.flag)} text-slate-700`}>{displayValue(row.timestamp)}</td>
-                                        <td className={`border border-slate-300 px-3 py-2 ${getRowBackgroundColor(row.flag)} text-slate-700 ${isDiff('r_sph') ? 'bg-amber-100 font-bold text-amber-900' : ''}`}>{displayValue(row.r_sph)}</td>
-                                        <td className={`border border-slate-300 px-3 py-2 ${getRowBackgroundColor(row.flag)} text-slate-700 ${isDiff('r_cyl') ? 'bg-amber-100 font-bold text-amber-900' : ''}`}>{displayValue(row.r_cyl)}</td>
-                                        <td className={`border border-slate-300 px-3 py-2 ${getRowBackgroundColor(row.flag)} text-slate-700 ${isDiff('r_axis') ? 'bg-amber-100 font-bold text-amber-900' : ''}`}>{displayValue(row.r_axis)}</td>
-                                        <td className={`border border-slate-300 px-3 py-2 ${getRowBackgroundColor(row.flag)} text-slate-700 ${isDiff('r_add') ? 'bg-amber-100 font-bold text-amber-900' : ''}`}>{displayValue(row.r_add)}</td>
-                                        <td className={`border border-slate-300 px-3 py-2 ${getRowBackgroundColor(row.flag)} text-slate-700 ${isDiff('l_sph') ? 'bg-amber-100 font-bold text-amber-900' : ''}`}>{displayValue(row.l_sph)}</td>
-                                        <td className={`border border-slate-300 px-3 py-2 ${getRowBackgroundColor(row.flag)} text-slate-700 ${isDiff('l_cyl') ? 'bg-amber-100 font-bold text-amber-900' : ''}`}>{displayValue(row.l_cyl)}</td>
-                                        <td className={`border border-slate-300 px-3 py-2 ${getRowBackgroundColor(row.flag)} text-slate-700 ${isDiff('l_axis') ? 'bg-amber-100 font-bold text-amber-900' : ''}`}>{displayValue(row.l_axis)}</td>
-                                        <td className={`border border-slate-300 px-3 py-2 ${getRowBackgroundColor(row.flag)} text-slate-700 ${isDiff('l_add') ? 'bg-amber-100 font-bold text-amber-900' : ''}`}>{displayValue(row.l_add)}</td>
-                                        <td className={`border border-slate-300 px-3 py-2 ${getRowBackgroundColor(row.flag)} text-slate-700 ${isDiff('pd') ? 'bg-amber-100 font-bold text-amber-900' : ''}`}>{displayValue(row.pd)}</td>
-                                        <td className={`border border-slate-300 px-3 py-2 ${getRowBackgroundColor(row.flag)} text-slate-700 ${isDiff('chart_number') ? 'bg-amber-100 font-bold text-amber-900' : ''}`}>{displayValue(row.chart_number)}</td>
-                                        <td className={`border border-slate-300 px-3 py-2 ${getRowBackgroundColor(row.flag)} text-slate-700 ${isDiff('occluder_state') ? 'bg-amber-100 font-bold text-amber-900' : ''}`}>{displayValue(row.occluder_state)}</td>
-                                        <td className={`border border-slate-300 px-3 py-2 ${getRowBackgroundColor(row.flag)} text-slate-700 ${isDiff('chart_display') ? 'bg-amber-100 font-bold text-amber-900' : ''}`}>{displayValue(row.chart_display)}</td>
-                                        <td className={`border border-slate-300 px-3 py-2 ${getRowBackgroundColor(row.flag)} text-slate-700`}>{displayValue(row.speaker)}</td>
+                                    <tr key={currentRow.id} className={`${getRowBackgroundColor(currentRow)} hover:bg-slate-50 transition-colors`}>
+                                        {/* Read-only cells - Sticky up to Chart Display */}
+                                        <td className={`sticky left-0 z-10 border border-slate-300 px-2 py-1.5 ${getRowBackgroundColor(currentRow)} text-slate-700 min-w-[70px]`}>{displayValue(currentRow.timestamp)}</td>
+                                        <td className={getCellClass('r_sph', 'left-[70px] min-w-[60px]')}>{displayValue(currentRow.r_sph)}</td>
+                                        <td className={getCellClass('r_cyl', 'left-[130px] min-w-[60px]')}>{displayValue(currentRow.r_cyl)}</td>
+                                        <td className={getCellClass('r_axis', 'left-[190px] min-w-[60px]')}>{displayValue(currentRow.r_axis)}</td>
+                                        <td className={getCellClass('r_add', 'left-[250px] min-w-[60px]')}>{displayValue(currentRow.r_add)}</td>
+                                        <td className={getCellClass('l_sph', 'left-[310px] min-w-[60px]')}>{displayValue(currentRow.l_sph)}</td>
+                                        <td className={getCellClass('l_cyl', 'left-[370px] min-w-[60px]')}>{displayValue(currentRow.l_cyl)}</td>
+                                        <td className={getCellClass('l_axis', 'left-[430px] min-w-[60px]')}>{displayValue(currentRow.l_axis)}</td>
+                                        <td className={getCellClass('l_add', 'left-[490px] min-w-[60px]')}>{displayValue(currentRow.l_add)}</td>
+                                        <td className={getCellClass('pd', 'left-[550px] min-w-[50px]')}>{displayValue(currentRow.pd)}</td>
+                                        <td className={getCellClass('chart_number', 'left-[600px] min-w-[80px]')}>{displayValue(currentRow.chart_number)}</td>
+                                        <td className={getCellClass('occluder_state', 'left-[680px] min-w-[90px]')}>{displayValue(currentRow.occluder_state)}</td>
+                                        <td className={getCellClass('chart_display', 'left-[770px] min-w-[150px]')}>{displayValue(currentRow.chart_display)}</td>
+                                        <td className={`border border-slate-300 px-2 py-1.5 ${getRowBackgroundColor(currentRow)} text-slate-700 font-medium`}>{displayValue(currentRow.speaker)}</td>
 
                                         {/* Editable cells */}
                                         <td className="border border-slate-300 px-1 py-1">
                                             <select
-                                                value={row.step}
-                                                onChange={(e) => handleCellChange(row.id, 'step', e.target.value)}
+                                                value={currentRow.step}
+                                                onChange={(e) => handleCellChange(currentRow.id, 'step', e.target.value)}
                                                 disabled={!!targetUserId}
-                                                className={`w-full ${getEditableCellBg(row.flag)} border-0 px-2 py-1 text-slate-900 focus:outline-none focus:ring-1 focus:ring-purple-500 disabled:cursor-not-allowed`}
+                                                className={`w-full ${getEditableCellBg(currentRow)} border-0 px-2 py-1 text-slate-900 focus:outline-none focus:ring-1 focus:ring-purple-500 disabled:cursor-not-allowed`}
                                             >
                                                 {STEP_OPTIONS.map(opt => (
                                                     <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -399,21 +432,21 @@ const SpreadsheetLabeling = () => {
                                         <td className="border border-slate-300 px-1 py-1">
                                             <input
                                                 type="text"
-                                                value={row.substep}
-                                                onChange={(e) => handleCellChange(row.id, 'substep', e.target.value)}
+                                                value={currentRow.substep}
+                                                onChange={(e) => handleCellChange(currentRow.id, 'substep', e.target.value)}
                                                 disabled={!!targetUserId}
                                                 placeholder="Description of step"
-                                                className={`w-full ${getEditableCellBg(row.flag)} border-0 px-2 py-1 text-slate-900 focus:outline-none focus:ring-1 focus:ring-purple-500 disabled:cursor-not-allowed`}
+                                                className={`w-full ${getEditableCellBg(currentRow)} border-0 px-2 py-1 text-slate-900 focus:outline-none focus:ring-1 focus:ring-purple-500 disabled:cursor-not-allowed`}
                                             />
                                         </td>
                                         <td className="border border-slate-300 px-1 py-1">
                                             <input
                                                 type="text"
-                                                value={row.intent_of_optum}
-                                                onChange={(e) => handleCellChange(row.id, 'intent_of_optum', e.target.value)}
+                                                value={currentRow.intent_of_optum}
+                                                onChange={(e) => handleCellChange(currentRow.id, 'intent_of_optum', e.target.value)}
                                                 disabled={!!targetUserId}
                                                 placeholder="What Optum is thinking/doing"
-                                                className={`w-full ${getEditableCellBg(row.flag)} border-0 px-2 py-1 text-slate-900 focus:outline-none focus:ring-1 focus:ring-purple-500 disabled:cursor-not-allowed`}
+                                                className={`w-full ${getEditableCellBg(currentRow)} border-0 px-2 py-1 text-slate-900 focus:outline-none focus:ring-1 focus:ring-purple-500 disabled:cursor-not-allowed`}
                                             />
                                         </td>
                                         <td className="border border-slate-300 px-1 py-1">
@@ -421,11 +454,11 @@ const SpreadsheetLabeling = () => {
                                                 type="number"
                                                 min="0"
                                                 max="10"
-                                                value={row.confidence_of_optum}
-                                                onChange={(e) => handleCellChange(row.id, 'confidence_of_optum', e.target.value)}
+                                                value={currentRow.confidence_of_optum}
+                                                onChange={(e) => handleCellChange(currentRow.id, 'confidence_of_optum', e.target.value)}
                                                 disabled={!!targetUserId}
                                                 placeholder="0-10"
-                                                className={`w-full ${getEditableCellBg(row.flag)} border-0 px-2 py-1 text-slate-900 focus:outline-none focus:ring-1 focus:ring-purple-500 disabled:cursor-not-allowed`}
+                                                className={`w-full ${getEditableCellBg(currentRow)} border-0 px-2 py-1 text-slate-900 focus:outline-none focus:ring-1 focus:ring-purple-500 disabled:cursor-not-allowed`}
                                             />
                                         </td>
                                         <td className="border border-slate-300 px-1 py-1">
@@ -433,19 +466,19 @@ const SpreadsheetLabeling = () => {
                                                 type="number"
                                                 min="0"
                                                 max="10"
-                                                value={row.patient_confidence_score}
-                                                onChange={(e) => handleCellChange(row.id, 'patient_confidence_score', e.target.value)}
+                                                value={currentRow.patient_confidence_score}
+                                                onChange={(e) => handleCellChange(currentRow.id, 'patient_confidence_score', e.target.value)}
                                                 disabled={!!targetUserId}
                                                 placeholder="0-10"
-                                                className={`w-full ${getEditableCellBg(row.flag)} border-0 px-2 py-1 text-slate-900 focus:outline-none focus:ring-1 focus:ring-purple-500 disabled:cursor-not-allowed`}
+                                                className={`w-full ${getEditableCellBg(currentRow)} border-0 px-2 py-1 text-slate-900 focus:outline-none focus:ring-1 focus:ring-purple-500 disabled:cursor-not-allowed`}
                                             />
                                         </td>
                                         <td className="border border-slate-300 px-1 py-1">
                                             <select
-                                                value={row.flag}
-                                                onChange={(e) => handleCellChange(row.id, 'flag', e.target.value)}
+                                                value={currentRow.flag}
+                                                onChange={(e) => handleCellChange(currentRow.id, 'flag', e.target.value)}
                                                 disabled={!!targetUserId}
-                                                className={`w-full ${getEditableCellBg(row.flag)} border-0 px-2 py-1 text-slate-900 focus:outline-none focus:ring-1 focus:ring-purple-500 disabled:cursor-not-allowed`}
+                                                className={`w-full ${getEditableCellBg(currentRow)} border-0 px-2 py-1 text-slate-900 focus:outline-none focus:ring-1 focus:ring-purple-500 disabled:cursor-not-allowed`}
                                             >
                                                 <option value="NONE">⚪ NONE</option>
                                                 <option value="GREEN">🟢 GREEN</option>
@@ -456,11 +489,11 @@ const SpreadsheetLabeling = () => {
                                         <td className="border border-slate-300 px-1 py-1">
                                             <input
                                                 type="text"
-                                                value={row.reason_for_flag}
-                                                onChange={(e) => handleCellChange(row.id, 'reason_for_flag', e.target.value)}
+                                                value={currentRow.reason_for_flag}
+                                                onChange={(e) => handleCellChange(currentRow.id, 'reason_for_flag', e.target.value)}
                                                 disabled={!!targetUserId}
                                                 placeholder="Reason for flag"
-                                                className={`w-full ${getEditableCellBg(row.flag)} border-0 px-2 py-1 text-slate-900 focus:outline-none focus:ring-1 focus:ring-purple-500 disabled:cursor-not-allowed`}
+                                                className={`w-full ${getEditableCellBg(currentRow)} border-0 px-2 py-1 text-slate-900 focus:outline-none focus:ring-1 focus:ring-purple-500 disabled:cursor-not-allowed`}
                                             />
                                         </td>
                                     </tr>
