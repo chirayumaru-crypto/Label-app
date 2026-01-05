@@ -42,18 +42,20 @@ const Dashboard = () => {
         let interval: any;
 
         if (userRole === 'admin' && datasets.length > 0) {
+            // Initial fetch
             fetchAllProgress();
-            // Start polling every 5 seconds for real-time admin view
+
+            // Start polling every 3 seconds for a responsive real-time admin view
             interval = setInterval(() => {
                 fetchAllProgress();
-                fetchDatasets(); // Also refresh dataset totals
-            }, 5000);
+                fetchDatasets();
+            }, 3000);
         }
 
         return () => {
             if (interval) clearInterval(interval);
         };
-    }, [userRole, datasets.length]);
+    }, [userRole, datasets]); // Using datasets as dependency ensures the interval always uses the latest state
 
     const fetchAllProgress = async () => {
         const newMap: Record<number, UserProgress[]> = {};
@@ -199,14 +201,14 @@ const Dashboard = () => {
                                             <div className="flex items-center gap-4 text-xs text-slate-500 mt-1">
                                                 <span>Uploaded on {new Date(ds.uploaded_at).toLocaleDateString()}</span>
                                                 <span>•</span>
-                                                <div className="flex items-center gap-2 w-32">
+                                                <div className="flex items-center gap-2 w-48 ml-4">
                                                     <div className="h-2 flex-1 bg-slate-800 rounded-full overflow-hidden border border-slate-700">
                                                         <div
                                                             className="h-full bg-emerald-500 transition-all duration-500"
                                                             style={{ width: `${Math.min(100, (ds.labeled_count / Math.max(1, ds.total_rows)) * 100)}%` }}
                                                         />
                                                     </div>
-                                                    <span>{Math.round((ds.labeled_count / Math.max(1, ds.total_rows)) * 100)}%</span>
+                                                    <span className="min-w-[4rem] text-right font-mono">{ds.labeled_count}/{ds.total_rows} ({Math.round((ds.labeled_count / Math.max(1, ds.total_rows)) * 100)}%)</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -258,7 +260,9 @@ const Dashboard = () => {
                                                                         >
                                                                             <div className="flex justify-between items-center mb-1">
                                                                                 <span className="font-semibold text-sm truncate">{p.name}</span>
-                                                                                <span className="text-xs bg-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded">{p.percentage}%</span>
+                                                                                <span className="text-xs bg-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded font-mono">
+                                                                                    {p.labeled_count}/{ds.total_rows} ({p.percentage}%)
+                                                                                </span>
                                                                             </div>
                                                                             <div className="w-full bg-slate-700 h-1.5 rounded-full overflow-hidden">
                                                                                 <div
@@ -294,7 +298,7 @@ const Dashboard = () => {
                     </div>
                 </div>
             </div>
-        </div>
+        </div >
     );
 };
 

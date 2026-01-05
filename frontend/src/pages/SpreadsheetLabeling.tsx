@@ -141,6 +141,10 @@ const LabelingGuide = ({ onClose }: { onClose: () => void }) => (
                         </div>
                     </div>
                     <p className="text-xs text-slate-400 italic mt-2">Required: "Reason for Flag" must be filled if RED or YELLOW is selected.</p>
+                    <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-center gap-3 text-red-700 font-bold animate-pulse">
+                        <span className="text-xl">⚠️</span>
+                        <span>WARNING: Save your progress manually as a backup!</span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -266,6 +270,8 @@ const SpreadsheetLabeling = () => {
         return value;
     };
 
+    const labeledCount = rows.filter(r => r.step || (r.flag && r.flag !== 'NONE')).length;
+
     return (
         <div className="min-h-screen bg-white text-slate-900 flex flex-col">
             {targetUserId && (
@@ -283,7 +289,10 @@ const SpreadsheetLabeling = () => {
                     >
                         <ChevronLeft size={24} />
                     </button>
-                    <h1 className="font-bold text-lg">Spreadsheet Labeling</h1>
+                    <div>
+                        <h1 className="font-bold text-lg">Spreadsheet Labeling</h1>
+                        <p className="text-xs text-slate-500 font-medium">Progress: {labeledCount} / {rows.length} rows</p>
+                    </div>
                 </div>
                 <div className="flex items-center gap-3">
                     <button

@@ -1,7 +1,8 @@
 from fastapi import APIRouter, Depends, UploadFile, File, HTTPException
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from ..database import get_db
-from ..models.models import Dataset, LogRow, User, UserRole
+from ..models.models import Dataset, LogRow, User, UserRole, Label
 from ..schemas.schemas import DatasetOut
 from .auth import get_current_user
 import pandas as pd
@@ -115,7 +116,12 @@ def list_datasets(db: Session = Depends(get_db), current_user: User = Depends(ge
     
     for ds in datasets:
         total_rows = db.query(LogRow).filter(LogRow.dataset_id == ds.id).count()
-        total_labels = db.query(Label).join(LogRow).filter(LogRow.dataset_id == ds.id).count()
+        # Count unique log rows that have at least one label
+        distinct_labeled_rows = db.query(func.count(func.distinct(Label.log_row_id)))\
+            .join(LogRow)\
+            .filter(LogRow.dataset_id == ds.id).scalar() or 0
+        
+        total_labels = distinct_labeled_rows # Use unique rows for progress bar logic
         
         # Target labels = Total Rows * 5
         target_labels = total_rows * 5
