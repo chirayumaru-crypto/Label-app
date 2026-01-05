@@ -12,10 +12,13 @@ app = FastAPI(title="Eye-Test Data Labeling API")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    # In production, replace "*" with your specific frontend domain(s)
+    # e.g., ["https://label-app-khaki.vercel.app", "http://localhost:3000"]
+    allow_origins=["*"], 
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"]
 )
 
 app.include_router(auth.router)
