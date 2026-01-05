@@ -190,10 +190,10 @@ const Dashboard = () => {
                                                     <div className="h-2 flex-1 bg-slate-800 rounded-full overflow-hidden border border-slate-700">
                                                         <div
                                                             className="h-full bg-emerald-500 transition-all duration-500"
-                                                            style={{ width: `${Math.min(100, (ds.labeled_count / (Math.max(1, ds.total_rows) * 5)) * 100)}%` }}
+                                                            style={{ width: `${Math.min(100, (ds.labeled_count / Math.max(1, ds.total_rows)) * 100)}%` }}
                                                         />
                                                     </div>
-                                                    <span>{Math.round((ds.labeled_count / (Math.max(1, ds.total_rows) * 5)) * 100)}%</span>
+                                                    <span>{Math.round((ds.labeled_count / Math.max(1, ds.total_rows)) * 100)}%</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -208,7 +208,7 @@ const Dashboard = () => {
                                                 </button>
                                             )}
 
-                                            {/* Admin Progress & Review Dropdown */}
+                                            {/* Admin Progress ... */}
                                             {userRole === 'admin' && (
                                                 <div className="relative">
                                                     <button
@@ -260,6 +260,8 @@ const Dashboard = () => {
                                             >
                                                 <Download size={20} />
                                             </button>
+
+                                            {/* Admin Progress & Review Dropdown */}
                                             <button
                                                 onClick={() => navigate(`/spreadsheet/${ds.id}`)}
                                                 className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg font-bold transition-all shadow-lg shadow-emerald-900/20"
