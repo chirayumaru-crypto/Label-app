@@ -132,7 +132,8 @@ from sqlalchemy import func
 
 @router.get("/", response_model=List[DatasetOut])
 def list_datasets(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    datasets = db.query(Dataset).all()
+    # Sort by uploaded_at descending for admin by default
+    datasets = db.query(Dataset).order_by(Dataset.uploaded_at.desc()).all()
     results = []
     
     for ds in datasets:
@@ -142,19 +143,24 @@ def list_datasets(db: Session = Depends(get_db), current_user: User = Depends(ge
             .join(LogRow)\
             .filter(LogRow.dataset_id == ds.id).scalar() or 0
         
-        total_labels = distinct_labeled_rows # Use unique rows for progress bar logic
+        # Count unique labelers (users) who have contributed to this dataset
+        unique_labelers = db.query(func.count(func.distinct(Label.labeled_by)))\
+            .join(LogRow)\
+            .filter(LogRow.dataset_id == ds.id).scalar() or 0
         
-        # Target labels = Total Rows * 5
-        target_labels = total_rows * 5
-        is_completed = total_labels >= target_labels if total_rows > 0 else False
-        
-        # Hide completed datasets from non-admin users
-        if is_completed and current_user.role != UserRole.ADMIN:
+        # Hide datasets with 5 or more labelers from non-admin users
+        if unique_labelers >= 5 and current_user.role != UserRole.ADMIN:
             continue
             
         ds.total_rows = total_rows
-        ds.labeled_count = total_labels # This effectively tracks 'labels done' not 'rows done', but works for progress.
+        ds.labeled_count = distinct_labeled_rows
+        ds.labelers_count = unique_labelers
         results.append(ds)
+    
+    # Randomize order for non-admin users
+    if current_user.role != UserRole.ADMIN:
+        import random
+        random.shuffle(results)
         
     return results
 

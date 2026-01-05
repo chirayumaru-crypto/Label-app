@@ -13,6 +13,7 @@ export interface Dataset {
     uploaded_at: string;
     total_rows: number;
     labeled_count: number;
+    labelers_count: number;
 }
 
 export interface LogRow {

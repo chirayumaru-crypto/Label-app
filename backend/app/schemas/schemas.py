@@ -30,6 +30,7 @@ class DatasetOut(BaseModel):
     uploaded_at: datetime
     total_rows: int = 0
     labeled_count: int = 0
+    labelers_count: int = 0
     class Config:
         from_attributes = True
 
