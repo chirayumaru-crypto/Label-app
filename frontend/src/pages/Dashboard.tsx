@@ -198,21 +198,24 @@ const Dashboard = () => {
                                     <div key={ds.id} className="bg-slate-900 p-4 rounded-xl border border-slate-700 flex items-center justify-between group hover:border-primary-500/50 transition-all">
                                         <div>
                                             <h3 className="font-semibold text-lg">{ds.name}</h3>
-                                            {userRole === 'admin' && (
-                                                <div className="flex items-center gap-4 text-xs text-slate-500 mt-1">
-                                                    <span>Uploaded on {new Date(ds.uploaded_at).toLocaleString()}</span>
-                                                    <span>•</span>
-                                                    <div className="flex items-center gap-2 w-48 ml-4">
-                                                        <div className="h-2 flex-1 bg-slate-800 rounded-full overflow-hidden border border-slate-700">
-                                                            <div
-                                                                className="h-full bg-emerald-500 transition-all duration-500"
-                                                                style={{ width: `${Math.min(100, (ds.labeled_count / Math.max(1, ds.total_rows)) * 100)}%` }}
-                                                            />
-                                                        </div>
-                                                        <span className="min-w-[4rem] text-right font-mono">{ds.labeled_count}/{ds.total_rows} ({Math.round((ds.labeled_count / Math.max(1, ds.total_rows)) * 100)}%)</span>
+                                            <div className="flex flex-col gap-1 mt-1">
+                                                {userRole === 'admin' && (
+                                                    <span className="text-xs text-slate-500">
+                                                        Uploaded on {new Date(ds.uploaded_at).toLocaleString()}
+                                                    </span>
+                                                )}
+                                                <div className="flex items-center gap-2 w-48">
+                                                    <div className="h-2 flex-1 bg-slate-800 rounded-full overflow-hidden border border-slate-700">
+                                                        <div
+                                                            className="h-full bg-emerald-500 transition-all duration-500"
+                                                            style={{ width: `${Math.min(100, (ds.labeled_count / Math.max(1, ds.total_rows)) * 100)}%` }}
+                                                        />
                                                     </div>
+                                                    <span className="min-w-[4rem] text-right font-mono text-[10px] text-slate-500">
+                                                        {ds.labeled_count}/{ds.total_rows} ({Math.round((ds.labeled_count / Math.max(1, ds.total_rows)) * 100)}%)
+                                                    </span>
                                                 </div>
-                                            )}
+                                            </div>
                                         </div>
                                         <div className="flex items-center gap-3">
                                             {userRole === 'admin' && (
