@@ -1,7 +1,7 @@
 from sqlalchemy import Column, String, Integer, DateTime, ForeignKey, Float, Enum, Boolean, Index
 from sqlalchemy.orm import relationship
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 import enum
 from .base import Base
 
@@ -36,7 +36,7 @@ class Dataset(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, nullable=False)
     uploaded_by = Column(String, ForeignKey("users.id"))
-    uploaded_at = Column(DateTime, default=datetime.utcnow)
+    uploaded_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
     rows = relationship("LogRow", back_populates="dataset")
 
@@ -93,8 +93,8 @@ class Label(Base):
     flag = Column(Enum(LabelFlag), nullable=False)
     reason_for_flag = Column(String)
     
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
     log_row = relationship("LogRow", back_populates="labels")
 
@@ -105,7 +105,7 @@ class RowAssignment(Base):
     log_row_id = Column(Integer, ForeignKey("log_rows.id"))
     assigned_to = Column(String, ForeignKey("users.id"))
     status = Column(Enum(AssignmentStatus), default=AssignmentStatus.IN_PROGRESS)
-    assigned_at = Column(DateTime, default=datetime.utcnow)
+    assigned_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
     __table_args__ = (
         Index('idx_assignment_row_user', 'log_row_id', 'assigned_to', unique=True),

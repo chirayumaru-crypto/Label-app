@@ -194,110 +194,117 @@ const Dashboard = () => {
                             {datasets.length === 0 ? (
                                 <p className="text-slate-500 text-center py-8">No datasets uploaded yet.</p>
                             ) : (
-                                datasets.map((ds) => (
-                                    <div key={ds.id} className="bg-slate-900 p-4 rounded-xl border border-slate-700 flex items-center justify-between group hover:border-primary-500/50 transition-all">
-                                        <div>
-                                            <h3 className="font-semibold text-lg">{ds.name}</h3>
-                                            <div className="flex flex-col gap-1 mt-1">
-                                                {userRole === 'admin' && (
-                                                    <span className="text-xs text-slate-500">
-                                                        Uploaded on {new Date(ds.uploaded_at).toLocaleString()}
-                                                    </span>
-                                                )}
-                                                <div className="flex items-center gap-2 w-48">
-                                                    <div className="h-2 flex-1 bg-slate-800 rounded-full overflow-hidden border border-slate-700">
-                                                        <div
-                                                            className="h-full bg-emerald-500 transition-all duration-500"
-                                                            style={{ width: `${Math.min(100, (ds.labeled_count / Math.max(1, ds.total_rows)) * 100)}%` }}
-                                                        />
+                                datasets.map((ds) => {
+                                    const formatTimestamp = (ts: string) => {
+                                        if (!ts) return "";
+                                        const dateStr = (ts.endsWith('Z') || ts.includes('+')) ? ts : ts + "Z";
+                                        return new Date(dateStr).toLocaleString();
+                                    };
+                                    return (
+                                        <div key={ds.id} className="bg-slate-900 p-4 rounded-xl border border-slate-700 flex items-center justify-between group hover:border-primary-500/50 transition-all">
+                                            <div>
+                                                <h3 className="font-semibold text-lg">{ds.name}</h3>
+                                                <div className="flex flex-col gap-1 mt-1">
+                                                    {userRole === 'admin' && (
+                                                        <span className="text-xs text-slate-500">
+                                                            Uploaded on {formatTimestamp(ds.uploaded_at)}
+                                                        </span>
+                                                    )}
+                                                    <div className="flex items-center gap-2 w-48">
+                                                        <div className="h-2 flex-1 bg-slate-800 rounded-full overflow-hidden border border-slate-700">
+                                                            <div
+                                                                className="h-full bg-emerald-500 transition-all duration-500"
+                                                                style={{ width: `${Math.min(100, (ds.labeled_count / Math.max(1, ds.total_rows)) * 100)}%` }}
+                                                            />
+                                                        </div>
+                                                        <span className="min-w-[4rem] text-right font-mono text-[10px] text-slate-500">
+                                                            {ds.labeled_count}/{ds.total_rows} ({Math.round((ds.labeled_count / Math.max(1, ds.total_rows)) * 100)}%)
+                                                        </span>
                                                     </div>
-                                                    <span className="min-w-[4rem] text-right font-mono text-[10px] text-slate-500">
-                                                        {ds.labeled_count}/{ds.total_rows} ({Math.round((ds.labeled_count / Math.max(1, ds.total_rows)) * 100)}%)
-                                                    </span>
                                                 </div>
                                             </div>
-                                        </div>
-                                        <div className="flex items-center gap-3">
-                                            {userRole === 'admin' && (
-                                                <button
-                                                    onClick={() => handleDelete(ds.id)}
-                                                    className="p-2 text-slate-400 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors"
-                                                    title="Delete Dataset"
-                                                >
-                                                    <Trash2 size={20} />
-                                                </button>
-                                            )}
-
-
-
-                                            <button
-                                                onClick={() => handleExport(ds.id)}
-                                                className="p-2 text-slate-400 hover:text-primary-400 hover:bg-primary-400/10 rounded-lg transition-colors"
-                                                title="Export CSV"
-                                            >
-                                                <Download size={20} />
-                                            </button>
-
-                                            {/* Admin Progress ... */}
-                                            {userRole === 'admin' && (
-                                                <div className="relative">
+                                            <div className="flex items-center gap-3">
+                                                {userRole === 'admin' && (
                                                     <button
-                                                        onClick={() => setOpenDropdown(openDropdown === ds.id ? null : ds.id)}
-                                                        className="flex items-center gap-2 px-3 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-lg transition-colors text-sm font-medium"
+                                                        onClick={() => handleDelete(ds.id)}
+                                                        className="p-2 text-slate-400 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors"
+                                                        title="Delete Dataset"
                                                     >
-                                                        <Users size={16} className="text-blue-400" />
-                                                        <span>{progressMap[ds.id]?.length || 0} Users</span>
-                                                        <ChevronDown size={14} className={`transition-transform ${openDropdown === ds.id ? 'rotate-180' : ''}`} />
+                                                        <Trash2 size={20} />
                                                     </button>
+                                                )}
 
-                                                    {openDropdown === ds.id && (
-                                                        <div className="absolute top-full right-0 mt-2 w-64 bg-slate-800 border border-slate-600 rounded-xl shadow-xl z-20 overflow-hidden">
-                                                            <div className="p-3 border-b border-slate-700 bg-slate-900/50">
-                                                                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">User Progress</h4>
+
+
+                                                <button
+                                                    onClick={() => handleExport(ds.id)}
+                                                    className="p-2 text-slate-400 hover:text-primary-400 hover:bg-primary-400/10 rounded-lg transition-colors"
+                                                    title="Export CSV"
+                                                >
+                                                    <Download size={20} />
+                                                </button>
+
+                                                {/* Admin Progress ... */}
+                                                {userRole === 'admin' && (
+                                                    <div className="relative">
+                                                        <button
+                                                            onClick={() => setOpenDropdown(openDropdown === ds.id ? null : ds.id)}
+                                                            className="flex items-center gap-2 px-3 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-lg transition-colors text-sm font-medium"
+                                                        >
+                                                            <Users size={16} className="text-blue-400" />
+                                                            <span>{progressMap[ds.id]?.length || 0} Users</span>
+                                                            <ChevronDown size={14} className={`transition-transform ${openDropdown === ds.id ? 'rotate-180' : ''}`} />
+                                                        </button>
+
+                                                        {openDropdown === ds.id && (
+                                                            <div className="absolute top-full right-0 mt-2 w-64 bg-slate-800 border border-slate-600 rounded-xl shadow-xl z-20 overflow-hidden">
+                                                                <div className="p-3 border-b border-slate-700 bg-slate-900/50">
+                                                                    <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">User Progress</h4>
+                                                                </div>
+                                                                <div className="max-h-60 overflow-y-auto">
+                                                                    {progressMap[ds.id]?.length ? (
+                                                                        progressMap[ds.id].map(p => (
+                                                                            <button
+                                                                                key={p.user_id}
+                                                                                onClick={() => navigate(`/spreadsheet/${ds.id}?targetUser=${p.user_id}&userName=${encodeURIComponent(p.name)}`)}
+                                                                                className="w-full text-left p-3 hover:bg-slate-700 transition-colors border-b border-slate-700/50 last:border-0"
+                                                                            >
+                                                                                <div className="flex justify-between items-center mb-1">
+                                                                                    <span className="font-semibold text-sm truncate">{p.name}</span>
+                                                                                    <span className="text-xs bg-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded font-mono">
+                                                                                        {p.labeled_count}/{ds.total_rows} ({p.percentage}%)
+                                                                                    </span>
+                                                                                </div>
+                                                                                <div className="w-full bg-slate-700 h-1.5 rounded-full overflow-hidden">
+                                                                                    <div
+                                                                                        className="bg-blue-500 h-full rounded-full transition-all"
+                                                                                        style={{ width: `${p.percentage}%` }}
+                                                                                    />
+                                                                                </div>
+                                                                            </button>
+                                                                        ))
+                                                                    ) : (
+                                                                        <div className="p-4 text-center text-slate-500 text-sm">No activity yet</div>
+                                                                    )}
+                                                                </div>
                                                             </div>
-                                                            <div className="max-h-60 overflow-y-auto">
-                                                                {progressMap[ds.id]?.length ? (
-                                                                    progressMap[ds.id].map(p => (
-                                                                        <button
-                                                                            key={p.user_id}
-                                                                            onClick={() => navigate(`/spreadsheet/${ds.id}?targetUser=${p.user_id}&userName=${encodeURIComponent(p.name)}`)}
-                                                                            className="w-full text-left p-3 hover:bg-slate-700 transition-colors border-b border-slate-700/50 last:border-0"
-                                                                        >
-                                                                            <div className="flex justify-between items-center mb-1">
-                                                                                <span className="font-semibold text-sm truncate">{p.name}</span>
-                                                                                <span className="text-xs bg-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded font-mono">
-                                                                                    {p.labeled_count}/{ds.total_rows} ({p.percentage}%)
-                                                                                </span>
-                                                                            </div>
-                                                                            <div className="w-full bg-slate-700 h-1.5 rounded-full overflow-hidden">
-                                                                                <div
-                                                                                    className="bg-blue-500 h-full rounded-full transition-all"
-                                                                                    style={{ width: `${p.percentage}%` }}
-                                                                                />
-                                                                            </div>
-                                                                        </button>
-                                                                    ))
-                                                                ) : (
-                                                                    <div className="p-4 text-center text-slate-500 text-sm">No activity yet</div>
-                                                                )}
-                                                            </div>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            )}
+                                                        )}
+                                                    </div>
+                                                )}
 
 
-                                            {/* Admin Progress & Review Dropdown */}
-                                            <button
-                                                onClick={() => navigate(`/spreadsheet/${ds.id}`)}
-                                                className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg font-bold transition-all shadow-lg shadow-emerald-900/20"
-                                            >
-                                                <Play size={18} fill="currentColor" />
-                                                Start Labeling
-                                            </button>
+                                                {/* Admin Progress & Review Dropdown */}
+                                                <button
+                                                    onClick={() => navigate(`/spreadsheet/${ds.id}`)}
+                                                    className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg font-bold transition-all shadow-lg shadow-emerald-900/20"
+                                                >
+                                                    <Play size={18} fill="currentColor" />
+                                                    Start Labeling
+                                                </button>
+                                            </div>
                                         </div>
-                                    </div>
-                                ))
+                                    );
+                                })
                             )}
                         </div>
                     </div>
