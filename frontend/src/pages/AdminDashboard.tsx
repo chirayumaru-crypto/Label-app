@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabase';
-import { ChevronLeft, RefreshCw, CheckCircle, Clock, Users as UsersIcon } from 'lucide-react';
+import { exportDataset } from '../services/api';
+import { ChevronLeft, RefreshCw, CheckCircle, Clock, Users as UsersIcon, Eye, Download } from 'lucide-react';
 
 interface DatasetProgress {
     dataset_id: number;
@@ -107,6 +108,30 @@ const AdminDashboard = () => {
         return Math.round((reviewed / total) * 100);
     };
 
+    const handleViewUserWork = (datasetId: number, userId: string) => {
+        navigate(`/spreadsheet/${datasetId}?userId=${userId}&viewOnly=true`);
+    };
+
+    const handleDownloadUserWork = async (datasetId: number, userId: string, userEmail: string) => {
+        try {
+            const { data, error } = await exportDataset(datasetId, 'csv', userId);
+            if (error) throw error;
+            if (data) {
+                const url = window.URL.createObjectURL(data);
+                const link = document.createElement('a');
+                link.href = url;
+                const sanitizedEmail = userEmail.replace(/[^a-z0-9]/gi, '_');
+                link.setAttribute('download', `dataset_${datasetId}_${sanitizedEmail}_${new Date().toISOString().split('T')[0]}.csv`);
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                window.URL.revokeObjectURL(url);
+            }
+        } catch (err) {
+            alert('Download failed: ' + (err as Error).message);
+        }
+    };
+
     if (loading) {
         return (
             <div className="min-h-screen bg-slate-50 flex items-center justify-center">
@@ -199,6 +224,26 @@ const AdminDashboard = () => {
                                                                 </span>
                                                             )}
                                                         </div>
+                                                    
+                                                    {/* Action Buttons */}
+                                                    <div className="flex items-center gap-2 ml-4">
+                                                        <button
+                                                            onClick={() => handleViewUserWork(dataset.dataset_id, user.user_id)}
+                                                            className="flex items-center gap-1 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm"
+                                                            title="View their labeled work"
+                                                        >
+                                                            <Eye size={16} />
+                                                            View
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleDownloadUserWork(dataset.dataset_id, user.user_id, user.user_email)}
+                                                            className="flex items-center gap-1 px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors text-sm"
+                                                            title="Download their CSV"
+                                                        >
+                                                            <Download size={16} />
+                                                            Download
+                                                        </button>
+                                                    </div>
                                                         
                                                         {/* Progress Bar */}
                                                         <div className="mb-2">

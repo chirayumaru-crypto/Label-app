@@ -180,7 +180,10 @@ const Dashboard = () => {
             // Insert in batches to avoid timeout
             const batchSize = 100;
             for (let i = 0; i < rows.length; i += batchSize) {
-                const batch = rows.slice(i, i + batchSize);
+                const batch = rows.slice(i, i + batchSize).map(row => ({
+                    ...row,
+                    user_id: null  // Master data has no user_id
+                }));
                 const { error: insertError } = await supabase
                     .from('spreadsheet_data')
                     .insert(batch);
