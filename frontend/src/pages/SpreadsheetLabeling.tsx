@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { getSpreadsheetData, saveSpreadsheetData } from '../services/api';
+import { getSpreadsheetData, saveSpreadsheetData, getMasterSpreadsheetData, createUserDataCopy } from '../services/api';
 import { supabase } from '../supabase';
 import { ChevronLeft, Save, Download, HelpCircle, X } from 'lucide-react';
 
@@ -181,13 +181,36 @@ const SpreadsheetLabeling = () => {
 
     const fetchData = async () => {
         try {
-            const { data, error } = await getSpreadsheetData(parseInt(datasetId || '0'));
-            if (error) throw error;
-            if (data) {
-                setRows(data.map((item: any) => item.data) as RowData[]);
+            // First, try to get user's own data
+            const { data: userData, error: userError } = await getSpreadsheetData(parseInt(datasetId || '0'));
+            
+            if (userData && userData.length > 0) {
+                // User has their own data
+                setRows(userData.map((item: any) => item.data) as RowData[]);
+            } else {
+                // User doesn't have data yet, copy from master
+                const { data: masterData, error: masterError } = await getMasterSpreadsheetData(parseInt(datasetId || '0'));
+                
+                if (masterError) throw masterError;
+                
+                if (masterData && masterData.length > 0) {
+                    // Create user's copy
+                    const { data: newUserData, error: copyError } = await createUserDataCopy(
+                        parseInt(datasetId || '0'),
+                        masterData
+                    );
+                    
+                    if (copyError) throw copyError;
+                    
+                    if (newUserData) {
+                        setRows(newUserData.map((item: any) => item.data) as RowData[]);
+                    }
+                } else {
+                    setRows([]);
+                }
             }
         } catch (err) {
-            console.error('Failed to fetch data');
+            console.error('Failed to fetch data:', err);
         } finally {
             setLoading(false);
         }
