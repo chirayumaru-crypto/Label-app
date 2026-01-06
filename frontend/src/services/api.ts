@@ -2,7 +2,12 @@ import { supabase } from '../supabase';
 import { AuthCredentials } from '../types';
 
 export const signUp = async (credentials: AuthCredentials) => {
-    return supabase.auth.signUp(credentials);
+    return supabase.auth.signUp({
+        ...credentials,
+        options: {
+            emailRedirectTo: window.location.origin + '/login',
+        }
+    });
 };
 
 export const signIn = async (credentials: AuthCredentials) => {
@@ -18,7 +23,13 @@ export const getDatasets = async () => {
 };
 
 export const createDataset = async (name: string) => {
-    return supabase.from('datasets').insert([{ name }]);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('User not authenticated');
+    
+    return supabase.from('datasets').insert([{ 
+        name,
+        created_by: user.id 
+    }]).select();
 };
 
 export const getImages = async (datasetId: number, page: number, limit: number) => {

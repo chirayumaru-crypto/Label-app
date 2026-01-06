@@ -6,6 +6,7 @@ const Register = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
+    const [success, setSuccess] = useState('');
     const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
 
@@ -13,12 +14,19 @@ const Register = () => {
         e.preventDefault();
         setLoading(true);
         setError('');
+        setSuccess('');
 
         try {
-            const { error } = await signUp({ email, password });
+            const { data, error } = await signUp({ email, password });
             if (error) throw error;
-            alert('Check your email for a confirmation link.');
-            navigate('/login');
+            
+            // Check if email confirmation is required
+            if (data?.user && !data.session) {
+                setSuccess('Registration successful! Please check your email to confirm your account before logging in.');
+            } else {
+                setSuccess('Registration successful! Redirecting to login...');
+                setTimeout(() => navigate('/login'), 2000);
+            }
         } catch (err: any) {
             setError(err.error_description || err.message || 'Registration failed');
         } finally {
@@ -34,6 +42,12 @@ const Register = () => {
                 {error && (
                     <div className="bg-red-500/10 border border-red-500 text-red-500 p-3 rounded-lg mb-6 text-sm">
                         {error}
+                    </div>
+                )}
+
+                {success && (
+                    <div className="bg-emerald-500/10 border border-emerald-500 text-emerald-500 p-3 rounded-lg mb-6 text-sm">
+                        {success}
                     </div>
                 )}
 
