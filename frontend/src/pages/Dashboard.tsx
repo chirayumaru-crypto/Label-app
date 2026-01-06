@@ -16,8 +16,6 @@ const Dashboard = () => {
     const [progressMap, setProgressMap] = useState<Record<number, UserProgress[]>>({});
     const [openDropdown, setOpenDropdown] = useState<number | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
-    const [activeUsers, setActiveUsers] = useState<any[]>([]);
-    const [showActivityDropdown, setShowActivityDropdown] = useState(false);
 
     useEffect(() => {
         const getUser = async () => {
@@ -37,11 +35,6 @@ const Dashboard = () => {
     useEffect(() => {
         if (user) {
             fetchDatasets();
-            fetchActiveUsers();
-            
-            // Refresh active users every 10 seconds
-            const interval = setInterval(fetchActiveUsers, 10000);
-            return () => clearInterval(interval);
         }
     }, [user]);
 
@@ -87,26 +80,6 @@ const Dashboard = () => {
     const fetchAllProgress = async () => {
         // This function needs to be re-implemented with Supabase
         console.log("Fetching progress is not implemented for Supabase yet.");
-    };
-
-    const fetchActiveUsers = async () => {
-        try {
-            const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
-            
-            const { data, error } = await supabase
-                .from('user_activity')
-                .select(`
-                    *,
-                    datasets:dataset_id (name)
-                `)
-                .eq('is_active', true)
-                .gte('last_activity', fiveMinutesAgo);
-            
-            if (error) throw error;
-            setActiveUsers(data || []);
-        } catch (err) {
-            console.error('Failed to fetch active users:', err);
-        }
     };
 
     const handleUpload = async (e: React.FormEvent) => {
@@ -281,47 +254,6 @@ const Dashboard = () => {
                         )}
                     </div>
                     <div className="flex items-center gap-2">
-                        {/* Activity Dropdown */}
-                        <div className="relative">
-                            <button
-                                onClick={() => setShowActivityDropdown(!showActivityDropdown)}
-                                className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors border border-slate-700"
-                            >
-                                <Users size={18} />
-                                <span>{activeUsers.length}</span>
-                                <ChevronDown size={16} />
-                            </button>
-                            
-                            {showActivityDropdown && (
-                                <div className="absolute right-0 mt-2 w-80 bg-slate-800 border border-slate-700 rounded-lg shadow-xl z-50 max-h-96 overflow-y-auto">
-                                    <div className="p-3 border-b border-slate-700">
-                                        <h3 className="font-semibold">Active Users</h3>
-                                    </div>
-                                    {activeUsers.length === 0 ? (
-                                        <div className="p-4 text-center text-slate-500">
-                                            No activity
-                                        </div>
-                                    ) : (
-                                        <div className="divide-y divide-slate-700">
-                                            {activeUsers.map((activity: any) => (
-                                                <div key={activity.id} className="p-3 hover:bg-slate-700/50 transition-colors">
-                                                    <div className="flex items-center justify-between">
-                                                        <div>
-                                                            <p className="text-sm font-medium">{activity.datasets?.name || 'Unknown Dataset'}</p>
-                                                            <p className="text-xs text-slate-400">
-                                                                Active {Math.round((Date.now() - new Date(activity.last_activity).getTime()) / 60000)}m ago
-                                                            </p>
-                                                        </div>
-                                                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-                        </div>
-                        
                         {userRole === 'admin' && (
                             <button 
                                 onClick={() => navigate('/admin')} 

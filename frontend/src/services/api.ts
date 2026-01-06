@@ -70,15 +70,7 @@ export const getSpreadsheetData = async (datasetId: number) => {
 };
 
 export const saveSpreadsheetData = async (datasetId: number, data: any[]) => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error('User not authenticated');
-    
-    const records = data.map(row => ({ 
-        dataset_id: datasetId, 
-        data: row,
-        updated_by: user.id
-    }));
-    
+    const records = data.map(row => ({ dataset_id: datasetId, data: row }));
     return supabase.from('spreadsheet_data').upsert(records);
 };
 
