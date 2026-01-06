@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import api from '../services/api';
+import { signIn } from '../services/api';
 
 const Login = () => {
     const [email, setEmail] = useState('');
@@ -14,16 +14,12 @@ const Login = () => {
         setLoading(true);
         setError('');
 
-        const formData = new FormData();
-        formData.append('username', email);
-        formData.append('password', password);
-
         try {
-            const response = await api.post('/auth/login', formData);
-            localStorage.setItem('token', response.data.access_token);
+            const { error } = await signIn({ email, password });
+            if (error) throw error;
             navigate('/dashboard');
         } catch (err: any) {
-            setError(err.response?.data?.detail || 'Login failed');
+            setError(err.error_description || err.message || 'Login failed');
         } finally {
             setLoading(false);
         }

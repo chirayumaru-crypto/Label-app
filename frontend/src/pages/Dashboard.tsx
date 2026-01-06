@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import api from '../services/api';
+import { getDatasets, createDataset, deleteDataset, signOut, exportDataset } from '../services/api';
+import { supabase } from '../supabase';
 import { Dataset, UserProgress } from '../types';
 import { Upload, Play, Download, Trash2, LogOut, ChevronDown, Users } from 'lucide-react';
 
@@ -10,37 +11,46 @@ const Dashboard = () => {
     const [datasetName, setDatasetName] = useState('');
     const [uploading, setUploading] = useState(false);
     const navigate = useNavigate();
-
+    const [user, setUser] = useState<any>(null);
     const [userRole, setUserRole] = useState<string>('');
     const [progressMap, setProgressMap] = useState<Record<number, UserProgress[]>>({});
     const [openDropdown, setOpenDropdown] = useState<number | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
 
     useEffect(() => {
-        const init = async () => {
-            await fetchCurrentUser();
-            await fetchDatasets();
+        const getUser = async () => {
+            const { data: { user } } = await supabase.auth.getUser();
+            setUser(user);
+            // Assuming role is stored in user_metadata
+            if (user?.user_metadata?.role) {
+                setUserRole(user.user_metadata.role);
+            } else if (user) {
+                // Default to 'labeler' if no role is set
+                setUserRole('labeler');
+            }
         };
-        init();
+        getUser();
     }, []);
+
+    useEffect(() => {
+        if (user) {
+            fetchDatasets();
+        }
+    }, [user]);
 
     const filteredDatasets = datasets.filter(ds =>
         ds.name.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
-    const fetchCurrentUser = async () => {
-        try {
-            const response = await api.get('/auth/me');
-            setUserRole(response.data.role);
-        } catch (err) {
-            console.error('Failed to fetch user info');
-        }
-    };
-
     const fetchDatasets = async () => {
         try {
-            const response = await api.get('/datasets');
-            setDatasets(response.data);
+            const { data, error } = await getDatasets();
+            if (error) throw error;
+            if (data) {
+                // This is a temporary fix. The new schema might not have total_rows and labeled_count
+                const datasetsWithDefaults = data.map((d: any) => ({ ...d, total_rows: d.total_rows || 100, labeled_count: d.labeled_count || 0 }));
+                setDatasets(datasetsWithDefaults as any);
+            }
         } catch (err) {
             console.error('Failed to fetch datasets');
         }
@@ -50,10 +60,10 @@ const Dashboard = () => {
         let interval: any;
 
         if (userRole === 'admin') {
-            fetchAllProgress();
+            // fetchAllProgress(); // This needs to be adapted for Supabase
             fetchDatasets();
             interval = setInterval(() => {
-                fetchAllProgress();
+                // fetchAllProgress();
                 fetchDatasets();
             }, 5000);
         } else if (userRole === 'labeler') {
@@ -68,16 +78,8 @@ const Dashboard = () => {
     }, [userRole, datasets.length]);
 
     const fetchAllProgress = async () => {
-        const newMap: Record<number, UserProgress[]> = {};
-        await Promise.all(datasets.map(async (ds) => {
-            try {
-                const res = await api.get(`/spreadsheet/${ds.id}/progress`);
-                newMap[ds.id] = res.data;
-            } catch (e) {
-                console.error(`Failed to fetch progress for ${ds.id}`);
-            }
-        }));
-        setProgressMap(newMap);
+        // This function needs to be re-implemented with Supabase
+        console.log("Fetching progress is not implemented for Supabase yet.");
     };
 
     const handleUpload = async (e: React.FormEvent) => {
@@ -85,40 +87,60 @@ const Dashboard = () => {
         if (!file || !datasetName) return;
 
         setUploading(true);
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('name', datasetName);
-
+        
         try {
-            await api.post(`/datasets/upload?name=${encodeURIComponent(datasetName)}`, formData);
+            // 1. Create dataset entry
+            const { data: datasetData, error: datasetError } = await createDataset(datasetName);
+            if (datasetError) throw datasetError;
+            if (!datasetData) {
+                throw new Error("Could not create dataset");
+            }
+
+            const newDataset = (Array.isArray(datasetData) ? datasetData[0] : datasetData) as any;
+
+            // 2. Upload file to Supabase storage
+            const { error: uploadError } = await supabase.storage
+                .from('datasets')
+                .upload(`${newDataset.id}/${file.name}`, file);
+
+            if (uploadError) {
+                // If upload fails, delete the dataset entry
+                await deleteDataset(newDataset.id);
+                throw uploadError;
+            }
+
+            // 3. Optionally, you might want to trigger a backend function to process the CSV
+            //    and populate the 'images' or 'spreadsheet_data' table.
+
             setDatasetName('');
             setFile(null);
             fetchDatasets();
         } catch (err: any) {
-            const message = err.response?.data?.detail || 'Upload failed';
+            const message = err.message || 'Upload failed';
             alert(message);
         } finally {
             setUploading(false);
         }
     };
 
-    const handleLogout = () => {
-        localStorage.removeItem('token');
+    const handleLogout = async () => {
+        await signOut();
         navigate('/login');
     };
 
     const handleExport = async (id: number) => {
         try {
-            const response = await api.get(`/export/labeled_csv?dataset_id=${id}`, {
-                responseType: 'blob'
-            });
-            const url = window.URL.createObjectURL(new Blob([response.data]));
-            const link = document.createElement('a');
-            link.href = url;
-            link.setAttribute('download', `dataset_${id}_labeled.csv`);
-            document.body.appendChild(link);
-            link.click();
-            window.URL.revokeObjectURL(url);
+            const { data, error } = await exportDataset(id, 'csv');
+            if (error) throw error;
+            if (data) {
+                const url = window.URL.createObjectURL(data);
+                const link = document.createElement('a');
+                link.href = url;
+                link.setAttribute('download', `dataset_${id}_labeled.csv`);
+                document.body.appendChild(link);
+                link.click();
+                window.URL.revokeObjectURL(url);
+            }
         } catch (err) {
             alert('Export failed');
         }
@@ -127,10 +149,11 @@ const Dashboard = () => {
     const handleDelete = async (id: number) => {
         if (!window.confirm('Are you sure you want to delete this dataset? This cannot be undone.')) return;
         try {
-            await api.delete(`/datasets/${id}`);
+            const { error } = await deleteDataset(id);
+            if (error) throw error;
             fetchDatasets();
         } catch (err: any) {
-            const message = err.response?.data?.detail || 'Delete failed';
+            const message = err.message || 'Delete failed';
             alert(message);
         }
     };

@@ -1,5 +1,10 @@
 export type UserRole = 'labeler' | 'reviewer' | 'admin';
 
+export interface AuthCredentials {
+    email: string;
+    password: string;
+}
+
 export interface User {
     id: string;
     name: string;

@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import api from '../services/api';
-import { ChevronLeft, Save, Download, Eye, HelpCircle, X } from 'lucide-react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { getSpreadsheetData, saveSpreadsheetData } from '../services/api';
+import { ChevronLeft, Save, Download, HelpCircle, X } from 'lucide-react';
 
 interface RowData {
     id: number;
     // Read-only fields from CSV
-    engagement_id: string;
     timestamp: string;
     r_sph: string;
     r_cyl: string;
@@ -20,9 +19,6 @@ interface RowData {
     chart_number: string;
     occluder_state: string;
     chart_display: string;
-    speaker: string;
-    utterance_text: string;
-    translation_in_en: string;
 
     // Editable annotation fields
     step: string;
@@ -129,9 +125,6 @@ const getEditableCellBg = (flag: string): string => {
 const SpreadsheetLabeling = () => {
     const { datasetId } = useParams();
     const navigate = useNavigate();
-    const [searchParams] = useSearchParams();
-    const targetUserId = searchParams.get('targetUser');
-    const targetUserName = searchParams.get('userName');
 
     const [rows, setRows] = useState<RowData[]>([]);
     const [loading, setLoading] = useState(true);
@@ -144,11 +137,11 @@ const SpreadsheetLabeling = () => {
 
     const fetchData = async () => {
         try {
-            const endpoint = targetUserId
-                ? `/spreadsheet/${datasetId}/rows?target_user_id=${targetUserId}`
-                : `/spreadsheet/${datasetId}/rows`;
-            const response = await api.get(endpoint);
-            setRows(response.data);
+            const { data, error } = await getSpreadsheetData(parseInt(datasetId || '0'));
+            if (error) throw error;
+            if (data) {
+                setRows(data.map((item: any) => item.data) as RowData[]);
+            }
         } catch (err) {
             console.error('Failed to fetch data');
         } finally {
@@ -165,7 +158,8 @@ const SpreadsheetLabeling = () => {
     const handleSave = async () => {
         setSaving(true);
         try {
-            await api.post(`/spreadsheet/${datasetId}/save`, { rows });
+            const { error } = await saveSpreadsheetData(parseInt(datasetId || '0'), rows);
+            if (error) throw error;
             alert('Saved successfully!');
         } catch (err) {
             alert('Save failed');
@@ -176,15 +170,21 @@ const SpreadsheetLabeling = () => {
 
     const handleExport = async () => {
         try {
-            const response = await api.get(`/spreadsheet/${datasetId}/export`, {
-                responseType: 'blob'
-            });
-            const url = window.URL.createObjectURL(new Blob([response.data]));
+            // Export functionality using the rows data
+            const headers = Object.keys(rows[0] || {});
+            const csv = [
+                headers.join(','),
+                ...rows.map(row => headers.map(h => (row as any)[h]).join(','))
+            ].join('\n');
+            
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
             const link = document.createElement('a');
             link.href = url;
             link.setAttribute('download', `labeled_data_${datasetId}.csv`);
             document.body.appendChild(link);
             link.click();
+            window.URL.revokeObjectURL(url);
         } catch (err) {
             alert('Export failed');
         }
@@ -205,12 +205,6 @@ const SpreadsheetLabeling = () => {
 
     return (
         <div className="min-h-screen bg-white text-slate-900 flex flex-col">
-            {targetUserId && (
-                <div className="bg-amber-100 border-b border-amber-200 px-4 py-2 text-amber-800 text-sm font-medium flex items-center justify-center gap-2">
-                    <Eye size={16} />
-                    Review Mode: Viewing labels by {targetUserName || 'User'} (Read-Only)
-                </div>
-            )}
             {/* Header */}
             <header className="h-16 bg-blue-50 border-b border-blue-200 flex items-center justify-between px-6 shrink-0">
                 <div className="flex items-center gap-4">
@@ -239,9 +233,8 @@ const SpreadsheetLabeling = () => {
                     </button>
                     <button
                         onClick={handleSave}
-                        disabled={saving || !!targetUserId}
+                        disabled={saving}
                         className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg transition-colors disabled:opacity-50 text-white disabled:cursor-not-allowed"
-                        title={targetUserId ? "Cannot edit in review mode" : "Save changes"}
                     >
                         <Save size={18} />
                         {saving ? 'Saving...' : 'Save All'}
@@ -261,7 +254,7 @@ const SpreadsheetLabeling = () => {
                         <thead className="sticky top-0 bg-blue-100 z-10">
                             <tr>
                                 {/* Read-only columns */}
-                                <th className="border border-slate-300 px-3 py-2 text-left bg-blue-100 text-slate-900">Engagement_ID</th>
+                                {/* Engagement_ID removed */}
                                 <th className="border border-slate-300 px-3 py-2 text-left bg-blue-100 text-slate-900">Timestamp</th>
                                 <th className="border border-slate-300 px-3 py-2 text-left bg-blue-100 text-slate-900">R_SPH</th>
                                 <th className="border border-slate-300 px-3 py-2 text-left bg-blue-100 text-slate-900">R_CYL</th>
@@ -275,9 +268,9 @@ const SpreadsheetLabeling = () => {
                                 <th className="border border-slate-300 px-3 py-2 text-left bg-blue-100 text-slate-900">Chart_Number</th>
                                 <th className="border border-slate-300 px-3 py-2 text-left bg-blue-100 text-slate-900">Occluder_State</th>
                                 <th className="border border-slate-300 px-3 py-2 text-left bg-blue-100 text-slate-900">Chart_Display</th>
-                                <th className="border border-slate-300 px-3 py-2 text-left bg-blue-100 text-slate-900">Speaker</th>
-                                <th className="border border-slate-300 px-3 py-2 text-left bg-blue-100 text-slate-900">Utterance_Text</th>
-                                <th className="border border-slate-300 px-3 py-2 text-left bg-blue-100 text-slate-900">Translation_in_En</th>
+                                {/* Speaker removed */}
+                                {/* Utterance_Text removed */}
+                                {/* Translation_in_En removed */}
 
                                 {/* Editable columns */}
                                 <th className="border border-slate-300 px-3 py-2 text-left bg-purple-100 text-slate-900">Step</th>
@@ -293,7 +286,7 @@ const SpreadsheetLabeling = () => {
                             {rows.map((row) => (
                                 <tr key={row.id} className={`${getRowBackgroundColor(row.flag)} hover:opacity-80 transition-opacity`}>
                                     {/* Read-only cells */}
-                                    <td className={`border border-slate-300 px-3 py-2 ${getRowBackgroundColor(row.flag)} text-slate-700`}>{displayValue(row.engagement_id)}</td>
+                                    {/* engagement_id removed */}
                                     <td className={`border border-slate-300 px-3 py-2 ${getRowBackgroundColor(row.flag)} text-slate-700`}>{displayValue(row.timestamp)}</td>
                                     <td className={`border border-slate-300 px-3 py-2 ${getRowBackgroundColor(row.flag)} text-slate-700`}>{displayValue(row.r_sph)}</td>
                                     <td className={`border border-slate-300 px-3 py-2 ${getRowBackgroundColor(row.flag)} text-slate-700`}>{displayValue(row.r_cyl)}</td>
@@ -307,17 +300,16 @@ const SpreadsheetLabeling = () => {
                                     <td className={`border border-slate-300 px-3 py-2 ${getRowBackgroundColor(row.flag)} text-slate-700`}>{displayValue(row.chart_number)}</td>
                                     <td className={`border border-slate-300 px-3 py-2 ${getRowBackgroundColor(row.flag)} text-slate-700`}>{displayValue(row.occluder_state)}</td>
                                     <td className={`border border-slate-300 px-3 py-2 ${getRowBackgroundColor(row.flag)} text-slate-700`}>{displayValue(row.chart_display)}</td>
-                                    <td className={`border border-slate-300 px-3 py-2 ${getRowBackgroundColor(row.flag)} text-slate-700`}>{displayValue(row.speaker)}</td>
-                                    <td className={`border border-slate-300 px-3 py-2 ${getRowBackgroundColor(row.flag)} text-slate-700 max-w-xs truncate`}>{displayValue(row.utterance_text)}</td>
-                                    <td className={`border border-slate-300 px-3 py-2 ${getRowBackgroundColor(row.flag)} text-slate-700 max-w-xs truncate`}>{displayValue(row.translation_in_en)}</td>
+                                    {/* speaker removed */}
+                                    {/* utterance_text removed */}
+                                    {/* translation_in_en removed */}
 
                                     {/* Editable cells */}
                                     <td className="border border-slate-300 px-1 py-1">
                                         <select
                                             value={row.step}
                                             onChange={(e) => handleCellChange(row.id, 'step', e.target.value)}
-                                            disabled={!!targetUserId}
-                                            className={`w-full ${getEditableCellBg(row.flag)} border-0 px-2 py-1 text-slate-900 focus:outline-none focus:ring-1 focus:ring-purple-500 disabled:cursor-not-allowed`}
+                                            className={`w-full ${getEditableCellBg(row.flag)} border-0 px-2 py-1 text-slate-900 focus:outline-none focus:ring-1 focus:ring-purple-500`}
                                         >
                                             {STEP_OPTIONS.map(opt => (
                                                 <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -329,9 +321,8 @@ const SpreadsheetLabeling = () => {
                                             type="text"
                                             value={row.substep}
                                             onChange={(e) => handleCellChange(row.id, 'substep', e.target.value)}
-                                            disabled={!!targetUserId}
                                             placeholder="Description of step"
-                                            className={`w-full ${getEditableCellBg(row.flag)} border-0 px-2 py-1 text-slate-900 focus:outline-none focus:ring-1 focus:ring-purple-500 disabled:cursor-not-allowed`}
+                                            className={`w-full ${getEditableCellBg(row.flag)} border-0 px-2 py-1 text-slate-900 focus:outline-none focus:ring-1 focus:ring-purple-500`}
                                         />
                                     </td>
                                     <td className="border border-slate-300 px-1 py-1">
@@ -339,9 +330,8 @@ const SpreadsheetLabeling = () => {
                                             type="text"
                                             value={row.intent_of_optum}
                                             onChange={(e) => handleCellChange(row.id, 'intent_of_optum', e.target.value)}
-                                            disabled={!!targetUserId}
                                             placeholder="What Optum is thinking/doing"
-                                            className={`w-full ${getEditableCellBg(row.flag)} border-0 px-2 py-1 text-slate-900 focus:outline-none focus:ring-1 focus:ring-purple-500 disabled:cursor-not-allowed`}
+                                            className={`w-full ${getEditableCellBg(row.flag)} border-0 px-2 py-1 text-slate-900 focus:outline-none focus:ring-1 focus:ring-purple-500`}
                                         />
                                     </td>
                                     <td className="border border-slate-300 px-1 py-1">
@@ -351,9 +341,8 @@ const SpreadsheetLabeling = () => {
                                             max="10"
                                             value={row.confidence_of_optum}
                                             onChange={(e) => handleCellChange(row.id, 'confidence_of_optum', e.target.value)}
-                                            disabled={!!targetUserId}
                                             placeholder="0-10"
-                                            className={`w-full ${getEditableCellBg(row.flag)} border-0 px-2 py-1 text-slate-900 focus:outline-none focus:ring-1 focus:ring-purple-500 disabled:cursor-not-allowed`}
+                                            className={`w-full ${getEditableCellBg(row.flag)} border-0 px-2 py-1 text-slate-900 focus:outline-none focus:ring-1 focus:ring-purple-500`}
                                         />
                                     </td>
                                     <td className="border border-slate-300 px-1 py-1">
@@ -363,17 +352,15 @@ const SpreadsheetLabeling = () => {
                                             max="10"
                                             value={row.patient_confidence_score}
                                             onChange={(e) => handleCellChange(row.id, 'patient_confidence_score', e.target.value)}
-                                            disabled={!!targetUserId}
                                             placeholder="0-10"
-                                            className={`w-full ${getEditableCellBg(row.flag)} border-0 px-2 py-1 text-slate-900 focus:outline-none focus:ring-1 focus:ring-purple-500 disabled:cursor-not-allowed`}
+                                            className={`w-full ${getEditableCellBg(row.flag)} border-0 px-2 py-1 text-slate-900 focus:outline-none focus:ring-1 focus:ring-purple-500`}
                                         />
                                     </td>
                                     <td className="border border-slate-300 px-1 py-1">
                                         <select
                                             value={row.flag}
                                             onChange={(e) => handleCellChange(row.id, 'flag', e.target.value)}
-                                            disabled={!!targetUserId}
-                                            className={`w-full ${getEditableCellBg(row.flag)} border-0 px-2 py-1 text-slate-900 focus:outline-none focus:ring-1 focus:ring-purple-500 disabled:cursor-not-allowed`}
+                                            className={`w-full ${getEditableCellBg(row.flag)} border-0 px-2 py-1 text-slate-900 focus:outline-none focus:ring-1 focus:ring-purple-500`}
                                         >
                                             <option value="">-</option>
                                             <option value="GREEN">🟢 GREEN</option>
@@ -386,9 +373,8 @@ const SpreadsheetLabeling = () => {
                                             type="text"
                                             value={row.reason_for_flag}
                                             onChange={(e) => handleCellChange(row.id, 'reason_for_flag', e.target.value)}
-                                            disabled={!!targetUserId}
                                             placeholder="Reason for flag"
-                                            className={`w-full ${getEditableCellBg(row.flag)} border-0 px-2 py-1 text-slate-900 focus:outline-none focus:ring-1 focus:ring-purple-500 disabled:cursor-not-allowed`}
+                                            className={`w-full ${getEditableCellBg(row.flag)} border-0 px-2 py-1 text-slate-900 focus:outline-none focus:ring-1 focus:ring-purple-500`}
                                         />
                                     </td>
                                 </tr>

@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import api from '../services/api';
+import { signUp } from '../services/api';
 
 const Register = () => {
-    const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
@@ -16,11 +15,12 @@ const Register = () => {
         setError('');
 
         try {
-            const response = await api.post('/auth/register', { name, email, password });
-            localStorage.setItem('token', response.data.access_token);
-            navigate('/dashboard');
+            const { error } = await signUp({ email, password });
+            if (error) throw error;
+            alert('Check your email for a confirmation link.');
+            navigate('/login');
         } catch (err: any) {
-            setError(err.response?.data?.detail || 'Registration failed');
+            setError(err.error_description || err.message || 'Registration failed');
         } finally {
             setLoading(false);
         }
@@ -38,16 +38,6 @@ const Register = () => {
                 )}
 
                 <form onSubmit={handleRegister} className="space-y-6">
-                    <div>
-                        <label className="block text-slate-400 text-sm font-medium mb-2">Full Name</label>
-                        <input
-                            type="text"
-                            value={name}
-                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setName(e.target.value)}
-                            className="w-full bg-slate-700 border border-slate-600 rounded-lg py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all"
-                            required
-                        />
-                    </div>
                     <div>
                         <label className="block text-slate-400 text-sm font-medium mb-2">Email</label>
                         <input
