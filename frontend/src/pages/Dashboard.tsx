@@ -109,11 +109,49 @@ const Dashboard = () => {
                 throw uploadError;
             }
 
-            // 3. Optionally, you might want to trigger a backend function to process the CSV
-            //    and populate the 'images' or 'spreadsheet_data' table.
+            // 3. Parse CSV and insert data into spreadsheet_data table
+            const text = await file.text();
+            const lines = text.split('\n');
+            const headers = lines[0].split(',');
+            
+            const rows = [];
+            for (let i = 1; i < lines.length; i++) {
+                if (lines[i].trim()) {
+                    const values = lines[i].split(',');
+                    const rowData: any = { id: i };
+                    headers.forEach((header, index) => {
+                        rowData[header.trim()] = values[index]?.trim() || '';
+                    });
+                    rows.push({
+                        dataset_id: newDataset.id,
+                        data: rowData
+                    });
+                }
+            }
+
+            // Insert in batches to avoid timeout
+            const batchSize = 100;
+            for (let i = 0; i < rows.length; i += batchSize) {
+                const batch = rows.slice(i, i + batchSize);
+                const { error: insertError } = await supabase
+                    .from('spreadsheet_data')
+                    .insert(batch);
+                
+                if (insertError) {
+                    console.error('Insert error:', insertError);
+                    throw insertError;
+                }
+            }
+
+            // Update total_rows in dataset
+            await supabase
+                .from('datasets')
+                .update({ total_rows: rows.length })
+                .eq('id', newDataset.id);
 
             setDatasetName('');
             setFile(null);
+            alert(`Dataset uploaded successfully! ${rows.length} rows imported.`);
             fetchDatasets();
         } catch (err: any) {
             const message = err.message || 'Upload failed';
