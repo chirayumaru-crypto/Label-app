@@ -217,9 +217,19 @@ const Dashboard = () => {
                             </span>
                         )}
                     </div>
-                    <button onClick={handleLogout} className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors border border-slate-700">
-                        <LogOut size={18} /> Logout
-                    </button>
+                    <div className="flex items-center gap-2">
+                        {userRole === 'admin' && (
+                            <button 
+                                onClick={() => navigate('/admin')} 
+                                className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg transition-colors"
+                            >
+                                <Users size={18} /> Admin Dashboard
+                            </button>
+                        )}
+                        <button onClick={handleLogout} className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors border border-slate-700">
+                            <LogOut size={18} /> Logout
+                        </button>
+                    </div>
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">

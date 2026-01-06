@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { getSpreadsheetData, saveSpreadsheetData } from '../services/api';
+import { supabase } from '../supabase';
 import { ChevronLeft, Save, Download, HelpCircle, X } from 'lucide-react';
 
 interface RowData {
@@ -89,6 +90,9 @@ const LabelingGuide = ({ onClose }: { onClose: () => void }) => (
                     <li><span className="inline-block w-3 h-3 rounded bg-red-500 mr-2"></span><strong>RED:</strong> Step to be excluded or not part of eyetest</li>
                 </ul>
                 <p className="mt-2 text-slate-500 italic">Reason_For_Flag: Mark your reason when flagging a row</p>
+                <div className="mt-4 p-3 bg-yellow-100 border border-yellow-300 rounded-lg">
+                    <p className="text-yellow-800 font-semibold">⚠️ Important: Your changes are auto-saved every 5 seconds. Click "Save All" button to ensure all your work is saved before leaving.</p>
+                </div>
             </div>
         </div>
     </div>
@@ -130,10 +134,23 @@ const SpreadsheetLabeling = () => {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [showGuide, setShowGuide] = useState(true);
+    const [lastSaved, setLastSaved] = useState<Date | null>(null);
+    const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
     useEffect(() => {
         fetchData();
     }, [datasetId]);
+
+    // Autosave every 5 seconds
+    useEffect(() => {
+        if (!hasUnsavedChanges) return;
+        
+        const autosaveInterval = setInterval(() => {
+            handleSave(true);
+        }, 5000);
+
+        return () => clearInterval(autosaveInterval);
+    }, [rows, hasUnsavedChanges]);
 
     const fetchData = async () => {
         try {
@@ -153,18 +170,56 @@ const SpreadsheetLabeling = () => {
         setRows(rows.map(row =>
             row.id === rowId ? { ...row, [field]: value } : row
         ));
+        setHasUnsavedChanges(true);
     };
 
-    const handleSave = async () => {
+    const handleSave = async (isAutosave = false) => {
+        if (!hasUnsavedChanges && isAutosave) return;
+        
         setSaving(true);
         try {
             const { error } = await saveSpreadsheetData(parseInt(datasetId || '0'), rows);
             if (error) throw error;
-            alert('Saved successfully!');
+            
+            // Update progress
+            await updateUserProgress(parseInt(datasetId || '0'), rows.length, false);
+            
+            setLastSaved(new Date());
+            setHasUnsavedChanges(false);
+            
+            if (!isAutosave) {
+                alert('Saved successfully!');
+            }
         } catch (err) {
-            alert('Save failed');
+            if (!isAutosave) {
+                alert('Save failed');
+            }
         } finally {
             setSaving(false);
+        }
+    };
+
+    const updateUserProgress = async (datasetId: number, rowsReviewed: number, isSubmitted: boolean) => {
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return;
+
+            const progressData = {
+                dataset_id: datasetId,
+                user_id: user.id,
+                rows_reviewed: rowsReviewed,
+                last_saved_at: new Date().toISOString(),
+                is_submitted: isSubmitted,
+                submitted_at: isSubmitted ? new Date().toISOString() : null
+            };
+
+            const { error } = await supabase
+                .from('user_progress')
+                .upsert(progressData, { onConflict: 'dataset_id,user_id' });
+
+            if (error) console.error('Progress update error:', error);
+        } catch (err) {
+            console.error('Failed to update progress:', err);
         }
     };
 
@@ -214,7 +269,14 @@ const SpreadsheetLabeling = () => {
                     >
                         <ChevronLeft size={24} />
                     </button>
-                    <h1 className="font-bold text-lg">Spreadsheet Labeling</h1>
+                    <div>
+                        <h1 className="font-bold text-lg">Spreadsheet Labeling</h1>
+                        {lastSaved && (
+                            <p className="text-xs text-slate-500">
+                                Last saved: {lastSaved.toLocaleTimeString()}
+                            </p>
+                        )}
+                    </div>
                 </div>
                 <div className="flex items-center gap-3">
                     <button
