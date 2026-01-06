@@ -1,4 +1,4 @@
--- Create a function to get user progress with emails
+-- Create a function to get user progress with emails and names
 -- This function can be called from the client side
 
 CREATE OR REPLACE FUNCTION get_user_progress_with_emails()
@@ -7,6 +7,7 @@ RETURNS TABLE (
     dataset_id bigint,
     user_id uuid,
     user_email text,
+    user_name text,
     rows_reviewed integer,
     last_saved_at timestamp with time zone,
     is_submitted boolean,
@@ -22,6 +23,7 @@ BEGIN
         up.dataset_id,
         up.user_id,
         au.email as user_email,
+        COALESCE(au.raw_user_meta_data->>'name', au.email) as user_name,
         up.rows_reviewed,
         up.last_saved_at,
         up.is_submitted,

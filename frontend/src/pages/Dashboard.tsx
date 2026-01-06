@@ -111,7 +111,7 @@ const Dashboard = () => {
 
                 progressByDataset[progress.dataset_id].push({
                     user_id: progress.user_id,
-                    name: progress.user_email || 'Unknown User',
+                    name: progress.user_name || progress.user_email || 'Unknown User',
                     progress: progress.rows_reviewed,
                     percentage: percentage,
                     last_saved: progress.last_saved_at
@@ -394,7 +394,7 @@ const Dashboard = () => {
                                                                                         <Download size={12} /> Download
                                                                                     </button>
                                                                                     <button 
-                                                                                        onClick={() => navigate(`/spreadsheet/${ds.id}?targetUser=${p.user_id}&userName=${encodeURIComponent(p.name)}`)}
+                                                                                        onClick={() => navigate(`/spreadsheet/${ds.id}?userId=${p.user_id}`)}
                                                                                         className="flex-1 flex items-center justify-center gap-1 px-2 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded text-[10px] font-semibold"
                                                                                     >
                                                                                         <Play size={12} /> View
