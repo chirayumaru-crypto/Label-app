@@ -163,40 +163,25 @@ const SpreadsheetLabeling = () => {
     const [showGuide, setShowGuide] = useState(true);
     const [lastSaved, setLastSaved] = useState<Date | null>(null);
     const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-    const [viewOnly, setViewOnly] = useState(false);
-    const [viewingUserId, setViewingUserId] = useState<string | null>(null);
 
     useEffect(() => {
-        // Check URL params for view-only mode
-        const params = new URLSearchParams(window.location.search);
-        const userId = params.get('userId');
-        const isViewOnly = params.get('viewOnly') === 'true';
-        
-        if (userId && isViewOnly) {
-            setViewOnly(true);
-            setViewingUserId(userId);
-        }
-        
         fetchData();
     }, [datasetId]);
 
-    // Autosave every 5 seconds (only if not in view-only mode)
+    // Autosave every 5 seconds
     useEffect(() => {
-        if (!hasUnsavedChanges || viewOnly) return;
+        if (!hasUnsavedChanges) return;
         
         const autosaveInterval = setInterval(() => {
             handleSave(true);
         }, 5000);
 
         return () => clearInterval(autosaveInterval);
-    }, [rows, hasUnsavedChanges, viewOnly]);
+    }, [rows, hasUnsavedChanges]);
 
     const fetchData = async () => {
         try {
-            const params = new URLSearchParams(window.location.search);
-            const userId = params.get('userId');
-            
-            const { data, error } = await getSpreadsheetData(parseInt(datasetId || '0'), userId || undefined);
+            const { data, error } = await getSpreadsheetData(parseInt(datasetId || '0'));
             if (error) throw error;
             if (data) {
                 setRows(data.map((item: any) => item.data) as RowData[]);
@@ -209,8 +194,6 @@ const SpreadsheetLabeling = () => {
     };
 
     const handleCellChange = (rowId: number, field: keyof RowData, value: string) => {
-        if (viewOnly) return; // Prevent changes in view-only mode
-        
         setRows(rows.map(row =>
             row.id === rowId ? { ...row, [field]: value } : row
         ));
@@ -334,16 +317,14 @@ const SpreadsheetLabeling = () => {
             <header className="h-16 bg-blue-50 border-b border-blue-200 flex items-center justify-between px-6 shrink-0">
                 <div className="flex items-center gap-4">
                     <button
-                        onClick={() => navigate(viewOnly ? '/admin' : '/dashboard')}
+                        onClick={() => navigate('/dashboard')}
                         className="p-2 hover:bg-blue-100 rounded-lg transition-colors"
                     >
                         <ChevronLeft size={24} />
                     </button>
                     <div>
-                        <h1 className="font-bold text-lg">
-                            {viewOnly ? 'Viewing User Work (Read-Only)' : 'Spreadsheet Labeling'}
-                        </h1>
-                        {lastSaved && !viewOnly && (
+                        <h1 className="font-bold text-lg">Spreadsheet Labeling</h1>
+                        {lastSaved && (
                             <p className="text-xs text-slate-500">
                                 Last saved: {lastSaved.toLocaleTimeString()}
                             </p>
@@ -351,47 +332,34 @@ const SpreadsheetLabeling = () => {
                     </div>
                 </div>
                 <div className="flex items-center gap-3">
-                    {!viewOnly && (
-                        <>
-                            <button
-                                onClick={() => setShowGuide(!showGuide)}
-                                className="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors text-slate-700"
-                            >
-                                <HelpCircle size={18} />
-                                {showGuide ? 'Hide Guide' : 'Show Guide'}
-                            </button>
-                            <button
-                                onClick={handleExport}
-                                className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors text-white"
-                            >
-                                <Download size={18} />
-                                Export CSV
-                            </button>
-                            <button
-                                onClick={() => handleSave(false)}
-                                disabled={saving}
-                                className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg transition-colors disabled:opacity-50 text-white disabled:cursor-not-allowed"
-                            >
-                                <Save size={18} />
-                                {saving ? 'Saving...' : 'Save All'}
-                            </button>
-                        </>
-                    )}
-                    {viewOnly && (
-                        <button
-                            onClick={handleExport}
-                            className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors text-white"
-                        >
-                            <Download size={18} />
-                            Export This User's CSV
-                        </button>
-                    )}
+                    <button
+                        onClick={() => setShowGuide(!showGuide)}
+                        className="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors text-slate-700"
+                    >
+                        <HelpCircle size={18} />
+                        {showGuide ? 'Hide Guide' : 'Show Guide'}
+                    </button>
+                    <button
+                        onClick={handleExport}
+                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors text-white"
+                    >
+                        <Download size={18} />
+                        Export CSV
+                    </button>
+                    <button
+                        onClick={() => handleSave(false)}
+                        disabled={saving}
+                        className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg transition-colors disabled:opacity-50 text-white disabled:cursor-not-allowed"
+                    >
+                        <Save size={18} />
+                        {saving ? 'Saving...' : 'Save All'}
+                    </button>
                 </div>
             </header>
 
             {/* Labeling Guide */}
             <div className="p-4 pb-0">
-                {showGuide && !viewOnly && <LabelingGuide onClose={() => setShowGuide(false)} />}
+                {showGuide && <LabelingGuide onClose={() => setShowGuide(false)} />}
             </div>
 
             {/* Spreadsheet */}
@@ -463,7 +431,6 @@ const SpreadsheetLabeling = () => {
                                             onChange={(e) => handleCellChange(row.id, 'substep', e.target.value)}
                                             placeholder="Description of step"
                                             className={`w-full ${getEditableCellBg(row.flag)} border-0 px-2 py-1 text-slate-900 focus:outline-none focus:ring-1 focus:ring-purple-500`}
-                                            readOnly={viewOnly}
                                         />
                                     </td>
                                     <td className="border border-slate-300 px-1 py-1">
@@ -473,7 +440,6 @@ const SpreadsheetLabeling = () => {
                                             onChange={(e) => handleCellChange(row.id, 'intent_of_optum', e.target.value)}
                                             placeholder="What Optum is thinking/doing"
                                             className={`w-full ${getEditableCellBg(row.flag)} border-0 px-2 py-1 text-slate-900 focus:outline-none focus:ring-1 focus:ring-purple-500`}
-                                            readOnly={viewOnly}
                                         />
                                     </td>
                                     <td className="border border-slate-300 px-1 py-1">
@@ -485,7 +451,6 @@ const SpreadsheetLabeling = () => {
                                             onChange={(e) => handleCellChange(row.id, 'confidence_of_optum', e.target.value)}
                                             placeholder="0-10"
                                             className={`w-full ${getEditableCellBg(row.flag)} border-0 px-2 py-1 text-slate-900 focus:outline-none focus:ring-1 focus:ring-purple-500`}
-                                            readOnly={viewOnly}
                                         />
                                     </td>
                                     <td className="border border-slate-300 px-1 py-1">
@@ -497,7 +462,6 @@ const SpreadsheetLabeling = () => {
                                             onChange={(e) => handleCellChange(row.id, 'patient_confidence_score', e.target.value)}
                                             placeholder="0-10"
                                             className={`w-full ${getEditableCellBg(row.flag)} border-0 px-2 py-1 text-slate-900 focus:outline-none focus:ring-1 focus:ring-purple-500`}
-                                            readOnly={viewOnly}
                                         />
                                     </td>
                                     <td className="border border-slate-300 px-1 py-1">
@@ -505,7 +469,6 @@ const SpreadsheetLabeling = () => {
                                             value={row.flag}
                                             onChange={(e) => handleCellChange(row.id, 'flag', e.target.value)}
                                             className={`w-full ${getEditableCellBg(row.flag)} border-0 px-2 py-1 text-slate-900 focus:outline-none focus:ring-1 focus:ring-purple-500`}
-                                            disabled={viewOnly}
                                         >
                                             <option value="">-</option>
                                             <option value="GREEN">🟢 GREEN</option>
@@ -520,7 +483,6 @@ const SpreadsheetLabeling = () => {
                                             onChange={(e) => handleCellChange(row.id, 'reason_for_flag', e.target.value)}
                                             placeholder="Reason for flag"
                                             className={`w-full ${getEditableCellBg(row.flag)} border-0 px-2 py-1 text-slate-900 focus:outline-none focus:ring-1 focus:ring-purple-500`}
-                                            readOnly={viewOnly}
                                         />
                                     </td>
                                 </tr>
