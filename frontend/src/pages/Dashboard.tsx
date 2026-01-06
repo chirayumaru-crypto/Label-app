@@ -63,10 +63,10 @@ const Dashboard = () => {
         let interval: any;
 
         if (userRole === 'admin') {
-            fetchAllProgress();
+            // fetchAllProgress(); // This needs to be adapted for Supabase
             fetchDatasets();
             interval = setInterval(() => {
-                fetchAllProgress();
+                // fetchAllProgress();
                 fetchDatasets();
             }, 5000);
         } else if (userRole === 'labeler') {
@@ -81,47 +81,8 @@ const Dashboard = () => {
     }, [userRole, datasets.length]);
 
     const fetchAllProgress = async () => {
-        try {
-            // Call the Supabase function that joins user_progress with auth.users
-            const { data: progressData, error } = await supabase
-                .rpc('get_user_progress_with_emails');
-
-            if (error) {
-                console.error('Error fetching progress:', error);
-                return;
-            }
-
-            if (!progressData || progressData.length === 0) {
-                setProgressMap({});
-                return;
-            }
-
-            // Group progress by dataset
-            const progressByDataset: Record<number, UserProgress[]> = {};
-            
-            for (const progress of progressData) {
-                if (!progressByDataset[progress.dataset_id]) {
-                    progressByDataset[progress.dataset_id] = [];
-                }
-
-                // Find the corresponding dataset to get total_rows
-                const dataset = datasets.find(d => d.id === progress.dataset_id);
-                const totalRows = dataset?.total_rows || 100;
-                const percentage = totalRows > 0 ? Math.round((progress.rows_reviewed / totalRows) * 100) : 0;
-
-                progressByDataset[progress.dataset_id].push({
-                    user_id: progress.user_id,
-                    name: progress.user_name || progress.user_email || 'Unknown User',
-                    progress: progress.rows_reviewed,
-                    percentage: percentage,
-                    last_saved: progress.last_saved_at
-                });
-            }
-
-            setProgressMap(progressByDataset);
-        } catch (err) {
-            console.error('Failed to fetch progress:', err);
-        }
+        // This function needs to be re-implemented with Supabase
+        console.log("Fetching progress is not implemented for Supabase yet.");
     };
 
     const handleUpload = async (e: React.FormEvent) => {
@@ -394,7 +355,7 @@ const Dashboard = () => {
                                                                                         <Download size={12} /> Download
                                                                                     </button>
                                                                                     <button 
-                                                                                        onClick={() => navigate(`/spreadsheet/${ds.id}?userId=${p.user_id}`)}
+                                                                                        onClick={() => navigate(`/spreadsheet/${ds.id}?targetUser=${p.user_id}&userName=${encodeURIComponent(p.name)}`)}
                                                                                         className="flex-1 flex items-center justify-center gap-1 px-2 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded text-[10px] font-semibold"
                                                                                     >
                                                                                         <Play size={12} /> View

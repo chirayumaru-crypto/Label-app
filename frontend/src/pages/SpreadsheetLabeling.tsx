@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { getSpreadsheetData, saveSpreadsheetData } from '../services/api';
 import { supabase } from '../supabase';
-import { ChevronLeft, Save, Download, HelpCircle, X, Eye } from 'lucide-react';
+import { ChevronLeft, Save, Download, HelpCircle, X } from 'lucide-react';
 
 interface RowData {
     id: number;
@@ -155,9 +155,6 @@ const hasChanged = (currentRow: RowData, previousRow: RowData | null, field: key
 
 const SpreadsheetLabeling = () => {
     const { datasetId } = useParams();
-    const [searchParams] = useSearchParams();
-    const viewUserId = searchParams.get('userId');
-    const isReadOnly = !!viewUserId; // Read-only if viewing specific user's work
     const navigate = useNavigate();
 
     const [rows, setRows] = useState<RowData[]>([]);
@@ -171,30 +168,20 @@ const SpreadsheetLabeling = () => {
         fetchData();
     }, [datasetId]);
 
-    // Autosave every 5 seconds (only if not in read-only mode)
+    // Autosave every 5 seconds
     useEffect(() => {
-        if (!hasUnsavedChanges || isReadOnly) return;
+        if (!hasUnsavedChanges) return;
         
         const autosaveInterval = setInterval(() => {
             handleSave(true);
         }, 5000);
 
         return () => clearInterval(autosaveInterval);
-    }, [rows, hasUnsavedChanges, isReadOnly]);
+    }, [rows, hasUnsavedChanges]);
 
     const fetchData = async () => {
         try {
-            let query = supabase
-                .from('spreadsheet_data')
-                .select('*')
-                .eq('dataset_id', parseInt(datasetId || '0'));
-            
-            // If viewing specific user's work, filter by user_id
-            if (viewUserId) {
-                query = query.eq('user_id', viewUserId);
-            }
-            
-            const { data, error } = await query;
+            const { data, error } = await getSpreadsheetData(parseInt(datasetId || '0'));
             if (error) throw error;
             if (data) {
                 setRows(data.map((item: any) => item.data) as RowData[]);
@@ -207,7 +194,6 @@ const SpreadsheetLabeling = () => {
     };
 
     const handleCellChange = (rowId: number, field: keyof RowData, value: string) => {
-        if (isReadOnly) return; // Don't allow edits in read-only mode
         setRows(rows.map(row =>
             row.id === rowId ? { ...row, [field]: value } : row
         ));
@@ -222,18 +208,8 @@ const SpreadsheetLabeling = () => {
             const { error } = await saveSpreadsheetData(parseInt(datasetId || '0'), rows);
             if (error) throw error;
             
-            // Count how many rows have been labeled (have at least one editable field filled)
-            const labeledRowsCount = rows.filter(row => 
-                row.substep || 
-                row.intent_of_optum || 
-                row.confidence_of_optum || 
-                row.patient_confidence_score || 
-                row.flag || 
-                row.reason_for_flag
-            ).length;
-            
-            // Update progress with actual labeled rows count
-            await updateUserProgress(parseInt(datasetId || '0'), labeledRowsCount, false);
+            // Update progress
+            await updateUserProgress(parseInt(datasetId || '0'), rows.length, false);
             
             setLastSaved(new Date());
             setHasUnsavedChanges(false);
@@ -347,12 +323,8 @@ const SpreadsheetLabeling = () => {
                         <ChevronLeft size={24} />
                     </button>
                     <div>
-                        <h1 className="font-bold text-lg flex items-center gap-2">
-                            {isReadOnly && <Eye size={20} className="text-blue-600" />}
-                            Spreadsheet Labeling
-                            {isReadOnly && <span className="text-sm bg-blue-100 text-blue-700 px-2 py-1 rounded">Read-Only View</span>}
-                        </h1>
-                        {lastSaved && !isReadOnly && (
+                        <h1 className="font-bold text-lg">Spreadsheet Labeling</h1>
+                        {lastSaved && (
                             <p className="text-xs text-slate-500">
                                 Last saved: {lastSaved.toLocaleTimeString()}
                             </p>
@@ -374,16 +346,14 @@ const SpreadsheetLabeling = () => {
                         <Download size={18} />
                         Export CSV
                     </button>
-                    {!isReadOnly && (
-                        <button
-                            onClick={() => handleSave(false)}
-                            disabled={saving}
-                            className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg transition-colors disabled:opacity-50 text-white disabled:cursor-not-allowed"
-                        >
-                            <Save size={18} />
-                            {saving ? 'Saving...' : 'Save All'}
-                        </button>
-                    )}
+                    <button
+                        onClick={() => handleSave(false)}
+                        disabled={saving}
+                        className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg transition-colors disabled:opacity-50 text-white disabled:cursor-not-allowed"
+                    >
+                        <Save size={18} />
+                        {saving ? 'Saving...' : 'Save All'}
+                    </button>
                 </div>
             </header>
 
@@ -459,9 +429,8 @@ const SpreadsheetLabeling = () => {
                                             type="text"
                                             value={row.substep}
                                             onChange={(e) => handleCellChange(row.id, 'substep', e.target.value)}
-                                            disabled={isReadOnly}
                                             placeholder="Description of step"
-                                            className={`w-full ${getEditableCellBg(row.flag)} border-0 px-2 py-1 text-slate-900 focus:outline-none focus:ring-1 focus:ring-purple-500 disabled:opacity-60`}
+                                            className={`w-full ${getEditableCellBg(row.flag)} border-0 px-2 py-1 text-slate-900 focus:outline-none focus:ring-1 focus:ring-purple-500`}
                                         />
                                     </td>
                                     <td className="border border-slate-300 px-1 py-1">
@@ -469,9 +438,8 @@ const SpreadsheetLabeling = () => {
                                             type="text"
                                             value={row.intent_of_optum}
                                             onChange={(e) => handleCellChange(row.id, 'intent_of_optum', e.target.value)}
-                                            disabled={isReadOnly}
                                             placeholder="What Optum is thinking/doing"
-                                            className={`w-full ${getEditableCellBg(row.flag)} border-0 px-2 py-1 text-slate-900 focus:outline-none focus:ring-1 focus:ring-purple-500 disabled:opacity-60`}
+                                            className={`w-full ${getEditableCellBg(row.flag)} border-0 px-2 py-1 text-slate-900 focus:outline-none focus:ring-1 focus:ring-purple-500`}
                                         />
                                     </td>
                                     <td className="border border-slate-300 px-1 py-1">
@@ -481,9 +449,8 @@ const SpreadsheetLabeling = () => {
                                             max="10"
                                             value={row.confidence_of_optum}
                                             onChange={(e) => handleCellChange(row.id, 'confidence_of_optum', e.target.value)}
-                                            disabled={isReadOnly}
                                             placeholder="0-10"
-                                            className={`w-full ${getEditableCellBg(row.flag)} border-0 px-2 py-1 text-slate-900 focus:outline-none focus:ring-1 focus:ring-purple-500 disabled:opacity-60`}
+                                            className={`w-full ${getEditableCellBg(row.flag)} border-0 px-2 py-1 text-slate-900 focus:outline-none focus:ring-1 focus:ring-purple-500`}
                                         />
                                     </td>
                                     <td className="border border-slate-300 px-1 py-1">
@@ -493,17 +460,15 @@ const SpreadsheetLabeling = () => {
                                             max="10"
                                             value={row.patient_confidence_score}
                                             onChange={(e) => handleCellChange(row.id, 'patient_confidence_score', e.target.value)}
-                                            disabled={isReadOnly}
                                             placeholder="0-10"
-                                            className={`w-full ${getEditableCellBg(row.flag)} border-0 px-2 py-1 text-slate-900 focus:outline-none focus:ring-1 focus:ring-purple-500 disabled:opacity-60`}
+                                            className={`w-full ${getEditableCellBg(row.flag)} border-0 px-2 py-1 text-slate-900 focus:outline-none focus:ring-1 focus:ring-purple-500`}
                                         />
                                     </td>
                                     <td className="border border-slate-300 px-1 py-1">
                                         <select
                                             value={row.flag}
                                             onChange={(e) => handleCellChange(row.id, 'flag', e.target.value)}
-                                            disabled={isReadOnly}
-                                            className={`w-full ${getEditableCellBg(row.flag)} border-0 px-2 py-1 text-slate-900 focus:outline-none focus:ring-1 focus:ring-purple-500 disabled:opacity-60`}
+                                            className={`w-full ${getEditableCellBg(row.flag)} border-0 px-2 py-1 text-slate-900 focus:outline-none focus:ring-1 focus:ring-purple-500`}
                                         >
                                             <option value="">-</option>
                                             <option value="GREEN">🟢 GREEN</option>
@@ -516,9 +481,8 @@ const SpreadsheetLabeling = () => {
                                             type="text"
                                             value={row.reason_for_flag}
                                             onChange={(e) => handleCellChange(row.id, 'reason_for_flag', e.target.value)}
-                                            disabled={isReadOnly}
                                             placeholder="Reason for flag"
-                                            className={`w-full ${getEditableCellBg(row.flag)} border-0 px-2 py-1 text-slate-900 focus:outline-none focus:ring-1 focus:ring-purple-500 disabled:opacity-60`}
+                                            className={`w-full ${getEditableCellBg(row.flag)} border-0 px-2 py-1 text-slate-900 focus:outline-none focus:ring-1 focus:ring-purple-500`}
                                         />
                                     </td>
                                 </tr>

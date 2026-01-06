@@ -1,20 +1,15 @@
 import { supabase } from '../supabase';
 import { AuthCredentials } from '../types';
 
-export const signUp = async (credentials: AuthCredentials & { name?: string }) => {
+export const signUp = async (credentials: AuthCredentials) => {
     const redirectUrl = import.meta.env.PROD 
         ? 'https://label-lk.vercel.app/login'
         : window.location.origin + '/login';
     
     return supabase.auth.signUp({
-        email: credentials.email,
-        password: credentials.password,
+        ...credentials,
         options: {
             emailRedirectTo: redirectUrl,
-            data: {
-                name: credentials.name || '',
-                role: 'labeler'
-            }
         }
     });
 };
