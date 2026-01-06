@@ -60,7 +60,7 @@ export interface Label {
 export interface UserProgress {
     user_id: string;
     name: string;
-    email: string;
-    labeled_count: number;
+    progress?: number;
     percentage: number;
+    last_saved?: string;
 }

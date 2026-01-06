@@ -63,10 +63,10 @@ const Dashboard = () => {
         let interval: any;
 
         if (userRole === 'admin') {
-            // fetchAllProgress(); // This needs to be adapted for Supabase
+            fetchAllProgress();
             fetchDatasets();
             interval = setInterval(() => {
-                // fetchAllProgress();
+                fetchAllProgress();
                 fetchDatasets();
             }, 5000);
         } else if (userRole === 'labeler') {
@@ -81,8 +81,47 @@ const Dashboard = () => {
     }, [userRole, datasets.length]);
 
     const fetchAllProgress = async () => {
-        // This function needs to be re-implemented with Supabase
-        console.log("Fetching progress is not implemented for Supabase yet.");
+        try {
+            // Call the Supabase function that joins user_progress with auth.users
+            const { data: progressData, error } = await supabase
+                .rpc('get_user_progress_with_emails');
+
+            if (error) {
+                console.error('Error fetching progress:', error);
+                return;
+            }
+
+            if (!progressData || progressData.length === 0) {
+                setProgressMap({});
+                return;
+            }
+
+            // Group progress by dataset
+            const progressByDataset: Record<number, UserProgress[]> = {};
+            
+            for (const progress of progressData) {
+                if (!progressByDataset[progress.dataset_id]) {
+                    progressByDataset[progress.dataset_id] = [];
+                }
+
+                // Find the corresponding dataset to get total_rows
+                const dataset = datasets.find(d => d.id === progress.dataset_id);
+                const totalRows = dataset?.total_rows || 100;
+                const percentage = totalRows > 0 ? Math.round((progress.rows_reviewed / totalRows) * 100) : 0;
+
+                progressByDataset[progress.dataset_id].push({
+                    user_id: progress.user_id,
+                    name: progress.user_email || 'Unknown User',
+                    progress: progress.rows_reviewed,
+                    percentage: percentage,
+                    last_saved: progress.last_saved_at
+                });
+            }
+
+            setProgressMap(progressByDataset);
+        } catch (err) {
+            console.error('Failed to fetch progress:', err);
+        }
     };
 
     const handleUpload = async (e: React.FormEvent) => {
