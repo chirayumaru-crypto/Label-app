@@ -66,12 +66,72 @@ export const saveLabel = async (imageId: number, label: string) => {
 };
 
 export const getSpreadsheetData = async (datasetId: number) => {
-    return supabase.from('spreadsheet_data').select('*').eq('dataset_id', datasetId);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('User not authenticated');
+
+    // First, try to get user's own data
+    const { data: userData, error: userError } = await supabase
+        .from('spreadsheet_data')
+        .select('*')
+        .eq('dataset_id', datasetId)
+        .eq('user_id', user.id)
+        .order('row_number');
+
+    // If user has their own data, return it
+    if (userData && userData.length > 0) {
+        return { data: userData, error: null };
+    }
+
+    // Otherwise, get master data (user_id is null) and create user's copy
+    const { data: masterData, error: masterError } = await supabase
+        .from('spreadsheet_data')
+        .select('*')
+        .eq('dataset_id', datasetId)
+        .is('user_id', null)
+        .order('id');
+
+    if (masterError) return { data: null, error: masterError };
+    if (!masterData || masterData.length === 0) {
+        return { data: [], error: null };
+    }
+
+    // Create user's copy of the data
+    const userCopy = masterData.map((row, index) => ({
+        dataset_id: datasetId,
+        user_id: user.id,
+        row_number: index + 1,
+        data: row.data,
+    }));
+
+    const { data: insertedData, error: insertError } = await supabase
+        .from('spreadsheet_data')
+        .insert(userCopy)
+        .select();
+
+    if (insertError) return { data: null, error: insertError };
+    return { data: insertedData, error: null };
 };
 
 export const saveSpreadsheetData = async (datasetId: number, data: any[]) => {
-    const records = data.map(row => ({ dataset_id: datasetId, data: row }));
-    return supabase.from('spreadsheet_data').upsert(records);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('User not authenticated');
+
+    // Delete existing user data for this dataset
+    await supabase
+        .from('spreadsheet_data')
+        .delete()
+        .eq('dataset_id', datasetId)
+        .eq('user_id', user.id);
+
+    // Insert new data with row numbers
+    const records = data.map((row, index) => ({
+        dataset_id: datasetId,
+        user_id: user.id,
+        row_number: index + 1,
+        data: row,
+    }));
+
+    return supabase.from('spreadsheet_data').insert(records);
 };
 
 export const exportDataset = async (datasetId: number, format: 'csv' | 'json') => {
@@ -93,4 +153,17 @@ export const exportDataset = async (datasetId: number, format: 'csv' | 'json') =
 
 export const deleteDataset = async (datasetId: number) => {
     return supabase.from('datasets').delete().eq('id', datasetId);
+};
+
+export const getDatasetUserCount = async (datasetId: number) => {
+    const { data, error } = await supabase
+        .from('user_progress')
+        .select('user_id')
+        .eq('dataset_id', datasetId);
+    
+    if (error) return { count: 0, error };
+    
+    // Count unique users
+    const uniqueUsers = new Set(data?.map(p => p.user_id));
+    return { count: uniqueUsers.size, error: null };
 };

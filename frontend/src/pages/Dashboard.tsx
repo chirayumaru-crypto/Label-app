@@ -47,8 +47,44 @@ const Dashboard = () => {
             const { data, error } = await getDatasets();
             if (error) throw error;
             if (data) {
-                // This is a temporary fix. The new schema might not have total_rows and labeled_count
-                const datasetsWithDefaults = data.map((d: any) => ({ ...d, total_rows: d.total_rows || 100, labeled_count: d.labeled_count || 0 }));
+                let datasetsWithDefaults = data.map((d: any) => ({ 
+                    ...d, 
+                    total_rows: d.total_rows || 100, 
+                    labeled_count: d.labeled_count || 0 
+                }));
+
+                // For non-admin users, filter out datasets that have reached 5 users
+                if (userRole !== 'admin') {
+                    const datasetsWithCounts = await Promise.all(
+                        datasetsWithDefaults.map(async (ds: any) => {
+                            // Check if current user has already started working on this dataset
+                            const { data: userProgress } = await supabase
+                                .from('user_progress')
+                                .select('user_id')
+                                .eq('dataset_id', ds.id)
+                                .eq('user_id', user?.id);
+
+                            const hasStarted = userProgress && userProgress.length > 0;
+
+                            // Count total unique users
+                            const { data: allProgress } = await supabase
+                                .from('user_progress')
+                                .select('user_id')
+                                .eq('dataset_id', ds.id);
+
+                            const uniqueUsers = new Set(allProgress?.map((p: any) => p.user_id));
+                            const userCount = uniqueUsers.size;
+
+                            return { ...ds, userCount, hasStarted };
+                        })
+                    );
+
+                    // Only show datasets where user has started OR user count < 5
+                    datasetsWithDefaults = datasetsWithCounts.filter(
+                        (ds: any) => ds.hasStarted || ds.userCount < 5
+                    );
+                }
+
                 setDatasets(datasetsWithDefaults as any);
             }
         } catch (err) {
@@ -175,7 +211,12 @@ const Dashboard = () => {
             // Insert in batches to avoid timeout
             const batchSize = 100;
             for (let i = 0; i < rows.length; i += batchSize) {
-                const batch = rows.slice(i, i + batchSize);
+                const batch = rows.slice(i, i + batchSize).map((row, idx) => ({
+                    dataset_id: newDataset.id,
+                    user_id: null, // Master data has no user_id
+                    row_number: i + idx + 1,
+                    data: row.data
+                }));
                 const { error: insertError } = await supabase
                     .from('spreadsheet_data')
                     .insert(batch);
