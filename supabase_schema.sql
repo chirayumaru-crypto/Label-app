@@ -29,11 +29,10 @@ CREATE TABLE IF NOT EXISTS images (
 CREATE TABLE IF NOT EXISTS spreadsheet_data (
     id BIGSERIAL PRIMARY KEY,
     dataset_id BIGINT REFERENCES datasets(id) ON DELETE CASCADE,
-    user_id UUID REFERENCES auth.users(id),
     data JSONB NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    UNIQUE(dataset_id, user_id, (data->>'id'))
+    updated_by UUID REFERENCES auth.users(id)
 );
 
 -- Create user_progress table to track labeling progress
@@ -115,23 +114,23 @@ TO authenticated
 USING (true);
 
 -- Policies for spreadsheet_data table
--- Allow users to read only their own spreadsheet data
-CREATE POLICY "Allow users to read own spreadsheet_data"
+-- Allow authenticated users to read all spreadsheet data
+CREATE POLICY "Allow authenticated users to read spreadsheet_data"
 ON spreadsheet_data FOR SELECT
 TO authenticated
-USING (auth.uid() = user_id);
+USING (true);
 
--- Allow users to insert their own spreadsheet data
-CREATE POLICY "Allow users to insert own spreadsheet_data"
+-- Allow authenticated users to insert spreadsheet data
+CREATE POLICY "Allow authenticated users to insert spreadsheet_data"
 ON spreadsheet_data FOR INSERT
 TO authenticated
-WITH CHECK (auth.uid() = user_id);
+WITH CHECK (true);
 
--- Allow users to update their own spreadsheet data
-CREATE POLICY "Allow users to update own spreadsheet_data"
+-- Allow authenticated users to update spreadsheet data
+CREATE POLICY "Allow authenticated users to update spreadsheet_data"
 ON spreadsheet_data FOR UPDATE
 TO authenticated
-USING (auth.uid() = user_id);
+USING (true);
 
 -- Enable RLS for user_activity
 ALTER TABLE user_activity ENABLE ROW LEVEL SECURITY;

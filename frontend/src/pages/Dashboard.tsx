@@ -178,7 +178,6 @@ const Dashboard = () => {
                     allRows[i].id = rowId++;
                     rows.push({
                         dataset_id: newDataset.id,
-                        user_id: null, // Master data has no user_id
                         data: allRows[i]
                     });
                 } else {
@@ -194,7 +193,6 @@ const Dashboard = () => {
                         current.id = rowId++;
                         rows.push({
                             dataset_id: newDataset.id,
-                            user_id: null, // Master data has no user_id
                             data: current
                         });
                     }
