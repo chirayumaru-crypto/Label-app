@@ -114,7 +114,9 @@ const Dashboard = () => {
             const lines = text.split('\n').filter(line => line.trim());
             const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
             
-            const rows = [];
+            const compareColumns = ['r_sph', 'r_cyl', 'r_axis', 'r_add', 'l_sph', 'l_cyl', 'l_axis', 'l_add', 'pd', 'chart_number', 'occluder_state', 'chart_display'];
+            
+            const allRows = [];
             for (let i = 1; i < lines.length; i++) {
                 const values = lines[i].split(',');
                 const rowData: any = { 
@@ -130,10 +132,36 @@ const Dashboard = () => {
                 headers.forEach((header, index) => {
                     rowData[header] = values[index]?.trim() || '';
                 });
-                rows.push({
-                    dataset_id: newDataset.id,
-                    data: rowData
-                });
+                allRows.push(rowData);
+            }
+
+            // Remove duplicate adjacent rows based on compare columns
+            const rows = [];
+            let rowId = 1;
+            for (let i = 0; i < allRows.length; i++) {
+                if (i === 0) {
+                    allRows[i].id = rowId++;
+                    rows.push({
+                        dataset_id: newDataset.id,
+                        data: allRows[i]
+                    });
+                } else {
+                    const current = allRows[i];
+                    const previous = allRows[i - 1];
+                    
+                    // Check if all compare columns are the same
+                    const isDuplicate = compareColumns.every(col => 
+                        current[col] === previous[col]
+                    );
+                    
+                    if (!isDuplicate) {
+                        current.id = rowId++;
+                        rows.push({
+                            dataset_id: newDataset.id,
+                            data: current
+                        });
+                    }
+                }
             }
 
             // Insert in batches to avoid timeout
