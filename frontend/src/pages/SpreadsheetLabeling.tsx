@@ -222,8 +222,18 @@ const SpreadsheetLabeling = () => {
             const { error } = await saveSpreadsheetData(parseInt(datasetId || '0'), rows);
             if (error) throw error;
             
-            // Update progress
-            await updateUserProgress(parseInt(datasetId || '0'), rows.length, false);
+            // Count how many rows have been labeled (have at least one editable field filled)
+            const labeledRowsCount = rows.filter(row => 
+                row.substep || 
+                row.intent_of_optum || 
+                row.confidence_of_optum || 
+                row.patient_confidence_score || 
+                row.flag || 
+                row.reason_for_flag
+            ).length;
+            
+            // Update progress with actual labeled rows count
+            await updateUserProgress(parseInt(datasetId || '0'), labeledRowsCount, false);
             
             setLastSaved(new Date());
             setHasUnsavedChanges(false);
