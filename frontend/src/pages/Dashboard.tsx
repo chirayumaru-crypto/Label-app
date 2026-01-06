@@ -124,16 +124,18 @@ const Dashboard = () => {
                 const values = lines[i].split(',');
                 const rowData: any = { 
                     id: i,
-                    step: '',
                     substep: '',
                     intent_of_optum: '',
                     confidence_of_optum: '',
-                    patient_confidence_score: '',
+                    patient_confidence_score: '',  // Always empty for user to fill
                     flag: '',
                     reason_for_flag: ''
                 };
                 headers.forEach((header, index) => {
-                    rowData[header] = values[index]?.trim() || '';
+                    // Don't copy patient_confidence_score from CSV, keep it empty
+                    if (header !== 'patient_confidence_score') {
+                        rowData[header] = values[index]?.trim() || '';
+                    }
                 });
                 
                 // Skip rows where all compare columns are blank

@@ -252,20 +252,46 @@ const SpreadsheetLabeling = () => {
 
     const handleExport = async () => {
         try {
-            // Export functionality using the rows data
-            const headers = Object.keys(rows[0] || {});
-            const csv = [
-                headers.join(','),
-                ...rows.map(row => headers.map(h => (row as any)[h]).join(','))
-            ].join('\n');
+            if (!rows || rows.length === 0) {
+                alert('No data to export');
+                return;
+            }
+
+            // Define the columns we want to export in order
+            const columns = [
+                'timestamp', 'r_sph', 'r_cyl', 'r_axis', 'r_add',
+                'l_sph', 'l_cyl', 'l_axis', 'l_add', 'pd',
+                'chart_number', 'occluder_state', 'chart_display',
+                'substep', 'intent_of_optum', 'confidence_of_optum',
+                'patient_confidence_score', 'flag', 'reason_for_flag'
+            ];
+
+            // Create CSV header
+            const headers = columns.map(h => h.toUpperCase()).join(',');
+
+            // Create CSV rows with proper escaping
+            const csvRows = rows.map(row => {
+                return columns.map(col => {
+                    const value = (row as any)[col] || '';
+                    // Escape quotes and wrap in quotes if contains comma or quote
+                    const stringValue = String(value);
+                    if (stringValue.includes(',') || stringValue.includes('"') || stringValue.includes('\n')) {
+                        return '"' + stringValue.replace(/"/g, '""') + '"';
+                    }
+                    return stringValue;
+                }).join(',');
+            });
+
+            const csv = [headers, ...csvRows].join('\n');
             
-            const blob = new Blob([csv], { type: 'text/csv' });
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
             const url = window.URL.createObjectURL(blob);
             const link = document.createElement('a');
             link.href = url;
-            link.setAttribute('download', `labeled_data_${datasetId}.csv`);
+            link.setAttribute('download', `labeled_data_${datasetId}_${new Date().toISOString().split('T')[0]}.csv`);
             document.body.appendChild(link);
             link.click();
+            document.body.removeChild(link);
             window.URL.revokeObjectURL(url);
         } catch (err) {
             alert('Export failed');
