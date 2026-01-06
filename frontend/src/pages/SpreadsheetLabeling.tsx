@@ -386,23 +386,23 @@ const SpreadsheetLabeling = () => {
             <div className="flex-1 overflow-auto p-4">
                 <div className="inline-block min-w-full">
                     <table className="border-collapse border border-slate-300 text-sm">
-                        <thead className="sticky top-0 bg-blue-100 z-10">
+                        <thead className="sticky top-0 z-10">
                             <tr>
-                                {/* Read-only columns */}
+                                {/* Read-only columns - all sticky */}
                                 {/* Engagement_ID removed */}
-                                <th className="border border-slate-300 px-3 py-2 text-left bg-blue-100 text-slate-900">Timestamp</th>
-                                <th className="border border-slate-300 px-3 py-2 text-left bg-blue-100 text-slate-900">R_SPH</th>
-                                <th className="border border-slate-300 px-3 py-2 text-left bg-blue-100 text-slate-900">R_CYL</th>
-                                <th className="border border-slate-300 px-3 py-2 text-left bg-blue-100 text-slate-900">R_AXIS</th>
-                                <th className="border border-slate-300 px-3 py-2 text-left bg-blue-100 text-slate-900">R_ADD</th>
-                                <th className="border border-slate-300 px-3 py-2 text-left bg-blue-100 text-slate-900">L_SPH</th>
-                                <th className="border border-slate-300 px-3 py-2 text-left bg-blue-100 text-slate-900">L_CYL</th>
-                                <th className="border border-slate-300 px-3 py-2 text-left bg-blue-100 text-slate-900">L_AXIS</th>
-                                <th className="border border-slate-300 px-3 py-2 text-left bg-blue-100 text-slate-900">L_ADD</th>
-                                <th className="border border-slate-300 px-3 py-2 text-left bg-blue-100 text-slate-900">PD</th>
-                                <th className="border border-slate-300 px-3 py-2 text-left bg-blue-100 text-slate-900">Chart_Number</th>
-                                <th className="border border-slate-300 px-3 py-2 text-left bg-blue-100 text-slate-900">Occluder_State</th>
-                                <th className="border border-slate-300 px-3 py-2 text-left bg-blue-100 text-slate-900">Chart_Display</th>
+                                <th className="sticky left-0 z-20 border border-slate-300 px-3 py-2 text-left bg-blue-100 text-slate-900">Timestamp</th>
+                                <th className="sticky left-[120px] z-20 border border-slate-300 px-3 py-2 text-left bg-blue-100 text-slate-900">R_SPH</th>
+                                <th className="sticky left-[190px] z-20 border border-slate-300 px-3 py-2 text-left bg-blue-100 text-slate-900">R_CYL</th>
+                                <th className="sticky left-[260px] z-20 border border-slate-300 px-3 py-2 text-left bg-blue-100 text-slate-900">R_AXIS</th>
+                                <th className="sticky left-[330px] z-20 border border-slate-300 px-3 py-2 text-left bg-blue-100 text-slate-900">R_ADD</th>
+                                <th className="sticky left-[400px] z-20 border border-slate-300 px-3 py-2 text-left bg-blue-100 text-slate-900">L_SPH</th>
+                                <th className="sticky left-[470px] z-20 border border-slate-300 px-3 py-2 text-left bg-blue-100 text-slate-900">L_CYL</th>
+                                <th className="sticky left-[540px] z-20 border border-slate-300 px-3 py-2 text-left bg-blue-100 text-slate-900">L_AXIS</th>
+                                <th className="sticky left-[610px] z-20 border border-slate-300 px-3 py-2 text-left bg-blue-100 text-slate-900">L_ADD</th>
+                                <th className="sticky left-[680px] z-20 border border-slate-300 px-3 py-2 text-left bg-blue-100 text-slate-900">PD</th>
+                                <th className="sticky left-[750px] z-20 border border-slate-300 px-3 py-2 text-left bg-blue-100 text-slate-900">Chart_Number</th>
+                                <th className="sticky left-[850px] z-20 border border-slate-300 px-3 py-2 text-left bg-blue-100 text-slate-900">Occluder_State</th>
+                                <th className="sticky left-[960px] z-20 border border-slate-300 px-3 py-2 text-left bg-blue-100 text-slate-900">Chart_Display</th>
                                 {/* Speaker removed */}
                                 {/* Utterance_Text removed */}
                                 {/* Translation_in_En removed */}
@@ -424,21 +424,21 @@ const SpreadsheetLabeling = () => {
                                 
                                 return (
                                 <tr key={row.id} className={`${rowBgClass} hover:opacity-80 transition-opacity`}>
-                                    {/* Read-only cells */}
+                                    {/* Read-only cells - all sticky */}
                                     {/* engagement_id removed */}
-                                    <td className={`border border-slate-300 px-3 py-2 ${rowBgClass} text-slate-700`}>{displayValue(row.timestamp)}</td>
-                                    <td className={`border border-slate-300 px-3 py-2 ${hasChanged(row, previousRow, 'r_sph') ? 'bg-yellow-200' : rowBgClass} text-slate-700`}>{displayValue(row.r_sph)}</td>
-                                    <td className={`border border-slate-300 px-3 py-2 ${hasChanged(row, previousRow, 'r_cyl') ? 'bg-yellow-200' : rowBgClass} text-slate-700`}>{displayValue(row.r_cyl)}</td>
-                                    <td className={`border border-slate-300 px-3 py-2 ${hasChanged(row, previousRow, 'r_axis') ? 'bg-yellow-200' : rowBgClass} text-slate-700`}>{displayValue(row.r_axis)}</td>
-                                    <td className={`border border-slate-300 px-3 py-2 ${hasChanged(row, previousRow, 'r_add') ? 'bg-yellow-200' : rowBgClass} text-slate-700`}>{displayValue(row.r_add)}</td>
-                                    <td className={`border border-slate-300 px-3 py-2 ${hasChanged(row, previousRow, 'l_sph') ? 'bg-yellow-200' : rowBgClass} text-slate-700`}>{displayValue(row.l_sph)}</td>
-                                    <td className={`border border-slate-300 px-3 py-2 ${hasChanged(row, previousRow, 'l_cyl') ? 'bg-yellow-200' : rowBgClass} text-slate-700`}>{displayValue(row.l_cyl)}</td>
-                                    <td className={`border border-slate-300 px-3 py-2 ${hasChanged(row, previousRow, 'l_axis') ? 'bg-yellow-200' : rowBgClass} text-slate-700`}>{displayValue(row.l_axis)}</td>
-                                    <td className={`border border-slate-300 px-3 py-2 ${hasChanged(row, previousRow, 'l_add') ? 'bg-yellow-200' : rowBgClass} text-slate-700`}>{displayValue(row.l_add)}</td>
-                                    <td className={`border border-slate-300 px-3 py-2 ${hasChanged(row, previousRow, 'pd') ? 'bg-yellow-200' : rowBgClass} text-slate-700`}>{displayValue(row.pd)}</td>
-                                    <td className={`border border-slate-300 px-3 py-2 ${hasChanged(row, previousRow, 'chart_number') ? 'bg-yellow-200' : rowBgClass} text-slate-700`}>{displayValue(row.chart_number)}</td>
-                                    <td className={`border border-slate-300 px-3 py-2 ${hasChanged(row, previousRow, 'occluder_state') ? 'bg-yellow-200' : rowBgClass} text-slate-700`}>{displayValue(row.occluder_state)}</td>
-                                    <td className={`border border-slate-300 px-3 py-2 ${hasChanged(row, previousRow, 'chart_display') ? 'bg-yellow-200' : rowBgClass} text-slate-700`}>{displayValue(row.chart_display)}</td>
+                                    <td className={`sticky left-0 z-10 border border-slate-300 px-3 py-2 ${rowBgClass} text-slate-700`}>{displayValue(row.timestamp)}</td>
+                                    <td className={`sticky left-[120px] z-10 border border-slate-300 px-3 py-2 ${hasChanged(row, previousRow, 'r_sph') ? 'bg-yellow-200' : rowBgClass} text-slate-700`}>{displayValue(row.r_sph)}</td>
+                                    <td className={`sticky left-[190px] z-10 border border-slate-300 px-3 py-2 ${hasChanged(row, previousRow, 'r_cyl') ? 'bg-yellow-200' : rowBgClass} text-slate-700`}>{displayValue(row.r_cyl)}</td>
+                                    <td className={`sticky left-[260px] z-10 border border-slate-300 px-3 py-2 ${hasChanged(row, previousRow, 'r_axis') ? 'bg-yellow-200' : rowBgClass} text-slate-700`}>{displayValue(row.r_axis)}</td>
+                                    <td className={`sticky left-[330px] z-10 border border-slate-300 px-3 py-2 ${hasChanged(row, previousRow, 'r_add') ? 'bg-yellow-200' : rowBgClass} text-slate-700`}>{displayValue(row.r_add)}</td>
+                                    <td className={`sticky left-[400px] z-10 border border-slate-300 px-3 py-2 ${hasChanged(row, previousRow, 'l_sph') ? 'bg-yellow-200' : rowBgClass} text-slate-700`}>{displayValue(row.l_sph)}</td>
+                                    <td className={`sticky left-[470px] z-10 border border-slate-300 px-3 py-2 ${hasChanged(row, previousRow, 'l_cyl') ? 'bg-yellow-200' : rowBgClass} text-slate-700`}>{displayValue(row.l_cyl)}</td>
+                                    <td className={`sticky left-[540px] z-10 border border-slate-300 px-3 py-2 ${hasChanged(row, previousRow, 'l_axis') ? 'bg-yellow-200' : rowBgClass} text-slate-700`}>{displayValue(row.l_axis)}</td>
+                                    <td className={`sticky left-[610px] z-10 border border-slate-300 px-3 py-2 ${hasChanged(row, previousRow, 'l_add') ? 'bg-yellow-200' : rowBgClass} text-slate-700`}>{displayValue(row.l_add)}</td>
+                                    <td className={`sticky left-[680px] z-10 border border-slate-300 px-3 py-2 ${hasChanged(row, previousRow, 'pd') ? 'bg-yellow-200' : rowBgClass} text-slate-700`}>{displayValue(row.pd)}</td>
+                                    <td className={`sticky left-[750px] z-10 border border-slate-300 px-3 py-2 ${hasChanged(row, previousRow, 'chart_number') ? 'bg-yellow-200' : rowBgClass} text-slate-700`}>{displayValue(row.chart_number)}</td>
+                                    <td className={`sticky left-[850px] z-10 border border-slate-300 px-3 py-2 ${hasChanged(row, previousRow, 'occluder_state') ? 'bg-yellow-200' : rowBgClass} text-slate-700`}>{displayValue(row.occluder_state)}</td>
+                                    <td className={`sticky left-[960px] z-10 border border-slate-300 px-3 py-2 ${hasChanged(row, previousRow, 'chart_display') ? 'bg-yellow-200' : rowBgClass} text-slate-700`}>{displayValue(row.chart_display)}</td>
                                     {/* speaker removed */}
                                     {/* utterance_text removed */}
                                     {/* translation_in_en removed */}
