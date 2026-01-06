@@ -64,7 +64,7 @@ const LabelingGuide = ({ onClose }: { onClose: () => void }) => (
                 <h4 className="font-bold text-slate-800 mt-4 mb-2">🎨 Visual Indicators</h4>
                 <ul className="space-y-1 text-slate-600">
                     <li><span className="inline-block w-4 h-3 rounded bg-yellow-200 border border-slate-300 mr-2"></span><strong>Yellow cells:</strong> Values that changed from previous row</li>
-                    <li><span className="inline-block w-4 h-3 rounded bg-blue-100 border border-slate-300 mr-2"></span><strong>Light blue rows:</strong> Default configuration rows</li>
+                    <li><span className="inline-block w-4 h-3 rounded bg-blue-100 border border-slate-300 mr-2"></span><strong>Light blue rows:</strong> Shows Phoropter reset</li>
                 </ul>
             </div>
             <div>
@@ -120,19 +120,24 @@ const getEditableCellBg = (flag: string): string => {
 
 // Check if a row is the default configuration
 const isDefaultRow = (row: RowData): boolean => {
+    const normalize = (val: string) => val?.trim() || '';
+    const isZero = (val: string) => normalize(val) === '0' || normalize(val) === '0.0';
+    const is180 = (val: string) => normalize(val) === '180' || normalize(val) === '180.0';
+    const is64 = (val: string) => normalize(val) === '64' || normalize(val) === '64.0';
+    
     return (
-        row.r_sph === '0.0' &&
-        row.r_cyl === '0.0' &&
-        row.r_axis === '180.0' &&
-        row.r_add === '0.0' &&
-        row.l_sph === '0.0' &&
-        row.l_cyl === '0.0' &&
-        row.l_axis === '180.0' &&
-        row.l_add === '0.0' &&
-        row.pd === '64.0' &&
-        row.chart_number === 'Chart1' &&
-        row.occluder_state === 'Bino' &&
-        row.chart_display === "Large black 'E' in a white box"
+        isZero(row.r_sph) &&
+        isZero(row.r_cyl) &&
+        is180(row.r_axis) &&
+        isZero(row.r_add) &&
+        isZero(row.l_sph) &&
+        isZero(row.l_cyl) &&
+        is180(row.l_axis) &&
+        isZero(row.l_add) &&
+        is64(row.pd) &&
+        normalize(row.chart_number).toLowerCase() === 'chart1' &&
+        normalize(row.occluder_state).toLowerCase() === 'bino' &&
+        normalize(row.chart_display).toLowerCase() === "large black 'e' in a white box"
     );
 };
 
