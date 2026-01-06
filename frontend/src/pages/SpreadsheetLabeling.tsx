@@ -362,7 +362,6 @@ const SpreadsheetLabeling = () => {
                                 {/* Translation_in_En removed */}
 
                                 {/* Editable columns */}
-                                <th className="border border-slate-300 px-3 py-2 text-left bg-purple-100 text-slate-900">Step</th>
                                 <th className="border border-slate-300 px-3 py-2 text-left bg-purple-100 text-slate-900">Substep</th>
                                 <th className="border border-slate-300 px-3 py-2 text-left bg-purple-100 text-slate-900">Intent_of_Optum</th>
                                 <th className="border border-slate-300 px-3 py-2 text-left bg-purple-100 text-slate-900">Confidence_of_Optum</th>
@@ -399,17 +398,6 @@ const SpreadsheetLabeling = () => {
                                     {/* translation_in_en removed */}
 
                                     {/* Editable cells */}
-                                    <td className="border border-slate-300 px-1 py-1">
-                                        <select
-                                            value={row.step}
-                                            onChange={(e) => handleCellChange(row.id, 'step', e.target.value)}
-                                            className={`w-full ${getEditableCellBg(row.flag)} border-0 px-2 py-1 text-slate-900 focus:outline-none focus:ring-1 focus:ring-purple-500`}
-                                        >
-                                            {STEP_OPTIONS.map(opt => (
-                                                <option key={opt.value} value={opt.value}>{opt.label}</option>
-                                            ))}
-                                        </select>
-                                    </td>
                                     <td className="border border-slate-300 px-1 py-1">
                                         <input
                                             type="text"

@@ -132,7 +132,15 @@ const Dashboard = () => {
                 headers.forEach((header, index) => {
                     rowData[header] = values[index]?.trim() || '';
                 });
-                allRows.push(rowData);
+                
+                // Skip rows where all compare columns are blank
+                const allBlank = compareColumns.every(col => 
+                    !rowData[col] || rowData[col] === ''
+                );
+                
+                if (!allBlank) {
+                    allRows.push(rowData);
+                }
             }
 
             // Remove duplicate adjacent rows based on compare columns
