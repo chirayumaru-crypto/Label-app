@@ -85,13 +85,18 @@ export const saveSpreadsheetData = async (datasetId: number, data: any[]) => {
     return supabase.from('spreadsheet_data').insert(records);
 };
 
-export const exportDataset = async (datasetId: number, format: 'csv' | 'json') => {
-    // Fetch spreadsheet data for the dataset
-    const { data, error } = await supabase
+export const exportDataset = async (datasetId: number, format: 'csv' | 'json', userId?: string) => {
+    // Fetch spreadsheet data for the dataset, optionally filtered by user
+    let query = supabase
         .from('spreadsheet_data')
         .select('*')
-        .eq('dataset_id', datasetId)
-        .order('id');
+        .eq('dataset_id', datasetId);
+    
+    if (userId) {
+        query = query.eq('user_id', userId);
+    }
+    
+    const { data, error } = await query.order('id');
     
     if (error) return { error, data: null };
     if (!data || data.length === 0) {
