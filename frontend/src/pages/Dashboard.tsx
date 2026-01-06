@@ -128,15 +128,12 @@ const Dashboard = () => {
                     substep: '',
                     intent_of_optum: '',
                     confidence_of_optum: '',
-                    patient_confidence_score: '', // Always empty - user must fill
+                    patient_confidence_score: '',
                     flag: '',
                     reason_for_flag: ''
                 };
                 headers.forEach((header, index) => {
-                    // Skip patient_confidence_score from CSV - it should only be filled by users
-                    if (header !== 'patient_confidence_score') {
-                        rowData[header] = values[index]?.trim() || '';
-                    }
+                    rowData[header] = values[index]?.trim() || '';
                 });
                 
                 // Skip rows where all compare columns are blank
