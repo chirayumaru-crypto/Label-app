@@ -111,22 +111,29 @@ const Dashboard = () => {
 
             // 3. Parse CSV and insert data into spreadsheet_data table
             const text = await file.text();
-            const lines = text.split('\n');
-            const headers = lines[0].split(',');
+            const lines = text.split('\n').filter(line => line.trim());
+            const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
             
             const rows = [];
             for (let i = 1; i < lines.length; i++) {
-                if (lines[i].trim()) {
-                    const values = lines[i].split(',');
-                    const rowData: any = { id: i };
-                    headers.forEach((header, index) => {
-                        rowData[header.trim()] = values[index]?.trim() || '';
-                    });
-                    rows.push({
-                        dataset_id: newDataset.id,
-                        data: rowData
-                    });
-                }
+                const values = lines[i].split(',');
+                const rowData: any = { 
+                    id: i,
+                    step: '',
+                    substep: '',
+                    intent_of_optum: '',
+                    confidence_of_optum: '',
+                    patient_confidence_score: '',
+                    flag: '',
+                    reason_for_flag: ''
+                };
+                headers.forEach((header, index) => {
+                    rowData[header] = values[index]?.trim() || '';
+                });
+                rows.push({
+                    dataset_id: newDataset.id,
+                    data: rowData
+                });
             }
 
             // Insert in batches to avoid timeout
