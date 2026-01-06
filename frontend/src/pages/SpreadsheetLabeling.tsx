@@ -321,7 +321,7 @@ const SpreadsheetLabeling = () => {
                         Export CSV
                     </button>
                     <button
-                        onClick={handleSave}
+                        onClick={() => handleSave(false)}
                         disabled={saving}
                         className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg transition-colors disabled:opacity-50 text-white disabled:cursor-not-allowed"
                     >
