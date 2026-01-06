@@ -1,3 +1,6 @@
+-- Drop the existing function first
+DROP FUNCTION IF EXISTS get_user_progress_with_emails();
+
 -- Create a function to get user progress with emails and names
 -- This function can be called from the client side
 
