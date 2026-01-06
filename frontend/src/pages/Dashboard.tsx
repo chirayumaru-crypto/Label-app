@@ -320,6 +320,7 @@ const Dashboard = () => {
                                                 {userRole === 'admin' && (
                                                     <>
                                                         <button onClick={() => handleDelete(ds.id)} className="p-2 text-slate-400 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors"><Trash2 size={18} /></button>
+                                                        <button onClick={() => handleExport(ds.id)} className="p-2 text-slate-400 hover:text-primary-400 hover:bg-primary-400/10 rounded-lg transition-colors"><Download size={18} /></button>
                                                         
                                                         {/* User Versions Dropdown */}
                                                         <div className="relative">
