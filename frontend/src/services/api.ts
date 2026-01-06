@@ -66,12 +66,61 @@ export const saveLabel = async (imageId: number, label: string) => {
 };
 
 export const getSpreadsheetData = async (datasetId: number) => {
-    return supabase.from('spreadsheet_data').select('*').eq('dataset_id', datasetId);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('User not authenticated');
+    
+    // First, check if user has their own copy of the data
+    const { data: userData, error: userError } = await supabase
+        .from('spreadsheet_data')
+        .select('*')
+        .eq('dataset_id', datasetId)
+        .eq('user_id', user.id);
+    
+    if (userError) return { data: null, error: userError };
+    
+    // If user has no data yet, copy from the master dataset (user_id = null or admin's data)
+    if (!userData || userData.length === 0) {
+        const { data: masterData, error: masterError } = await supabase
+            .from('spreadsheet_data')
+            .select('*')
+            .eq('dataset_id', datasetId)
+            .is('user_id', null);
+        
+        if (masterError) return { data: null, error: masterError };
+        
+        if (masterData && masterData.length > 0) {
+            // Copy master data to user's own records
+            const userRecords = masterData.map(row => ({
+                dataset_id: datasetId,
+                user_id: user.id,
+                data: row.data
+            }));
+            
+            const { data: newData, error: insertError } = await supabase
+                .from('spreadsheet_data')
+                .insert(userRecords)
+                .select();
+            
+            return { data: newData, error: insertError };
+        }
+    }
+    
+    return { data: userData, error: null };
 };
 
 export const saveSpreadsheetData = async (datasetId: number, data: any[]) => {
-    const records = data.map(row => ({ dataset_id: datasetId, data: row }));
-    return supabase.from('spreadsheet_data').upsert(records);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('User not authenticated');
+    
+    const records = data.map(row => ({ 
+        dataset_id: datasetId, 
+        user_id: user.id,
+        data: row 
+    }));
+    
+    return supabase.from('spreadsheet_data').upsert(records, {
+        onConflict: 'dataset_id,user_id,data->id'
+    });
 };
 
 export const exportDataset = async (datasetId: number, format: 'csv' | 'json') => {

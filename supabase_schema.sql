@@ -29,9 +29,11 @@ CREATE TABLE IF NOT EXISTS images (
 CREATE TABLE IF NOT EXISTS spreadsheet_data (
     id BIGSERIAL PRIMARY KEY,
     dataset_id BIGINT REFERENCES datasets(id) ON DELETE CASCADE,
+    user_id UUID REFERENCES auth.users(id),
     data JSONB NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE(dataset_id, user_id, (data->>'id'))
 );
 
 -- Create user_progress table to track labeling progress
@@ -45,6 +47,17 @@ CREATE TABLE IF NOT EXISTS user_progress (
     submitted_at TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     UNIQUE(dataset_id, user_id)
+);
+
+-- Create user_activity table for real-time tracking
+CREATE TABLE IF NOT EXISTS user_activity (
+    id BIGSERIAL PRIMARY KEY,
+    user_id UUID REFERENCES auth.users(id),
+    dataset_id BIGINT REFERENCES datasets(id) ON DELETE CASCADE,
+    is_active BOOLEAN DEFAULT true,
+    last_activity TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE(user_id, dataset_id)
 );
 
 -- Create storage bucket for datasets
@@ -102,23 +115,42 @@ TO authenticated
 USING (true);
 
 -- Policies for spreadsheet_data table
--- Allow authenticated users to read all spreadsheet data
-CREATE POLICY "Allow authenticated users to read spreadsheet_data"
+-- Allow users to read only their own spreadsheet data
+CREATE POLICY "Allow users to read own spreadsheet_data"
 ON spreadsheet_data FOR SELECT
 TO authenticated
-USING (true);
+USING (auth.uid() = user_id);
 
--- Allow authenticated users to insert spreadsheet data
-CREATE POLICY "Allow authenticated users to insert spreadsheet_data"
+-- Allow users to insert their own spreadsheet data
+CREATE POLICY "Allow users to insert own spreadsheet_data"
 ON spreadsheet_data FOR INSERT
 TO authenticated
-WITH CHECK (true);
+WITH CHECK (auth.uid() = user_id);
 
--- Allow authenticated users to update spreadsheet data
-CREATE POLICY "Allow authenticated users to update spreadsheet_data"
+-- Allow users to update their own spreadsheet data
+CREATE POLICY "Allow users to update own spreadsheet_data"
 ON spreadsheet_data FOR UPDATE
 TO authenticated
+USING (auth.uid() = user_id);
+
+-- Enable RLS for user_activity
+ALTER TABLE user_activity ENABLE ROW LEVEL SECURITY;
+
+-- Policies for user_activity table
+CREATE POLICY "Allow users to read all activity"
+ON user_activity FOR SELECT
+TO authenticated
 USING (true);
+
+CREATE POLICY "Allow users to manage own activity"
+ON user_activity FOR INSERT
+TO authenticated
+WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Allow users to update own activity"
+ON user_activity FOR UPDATE
+TO authenticated
+USING (auth.uid() = user_id);
 
 -- Storage policies
 -- Allow authenticated users to upload to datasets bucket

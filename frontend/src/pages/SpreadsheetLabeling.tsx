@@ -166,6 +166,18 @@ const SpreadsheetLabeling = () => {
 
     useEffect(() => {
         fetchData();
+        updateActivity(true);
+        
+        // Update activity every 30 seconds
+        const activityInterval = setInterval(() => {
+            updateActivity(true);
+        }, 30000);
+        
+        // Mark as inactive when leaving
+        return () => {
+            clearInterval(activityInterval);
+            updateActivity(false);
+        };
     }, [datasetId]);
 
     // Autosave every 5 seconds
@@ -190,6 +202,24 @@ const SpreadsheetLabeling = () => {
             console.error('Failed to fetch data');
         } finally {
             setLoading(false);
+        }
+    };
+
+    const updateActivity = async (isActive: boolean) => {
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return;
+
+            await supabase
+                .from('user_activity')
+                .upsert({
+                    user_id: user.id,
+                    dataset_id: parseInt(datasetId || '0'),
+                    is_active: isActive,
+                    last_activity: new Date().toISOString()
+                }, { onConflict: 'user_id,dataset_id' });
+        } catch (err) {
+            console.error('Failed to update activity:', err);
         }
     };
 
