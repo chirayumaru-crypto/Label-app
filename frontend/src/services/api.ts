@@ -86,20 +86,52 @@ export const saveSpreadsheetData = async (datasetId: number, data: any[]) => {
 };
 
 export const exportDataset = async (datasetId: number, format: 'csv' | 'json') => {
-    // This is a placeholder. Export functionality will depend on your Supabase setup (e.g., using functions).
-    console.log(`Exporting dataset ${datasetId} to ${format}`);
-    const { data, error } = await supabase.from('images').select('*').eq('dataset_id', datasetId);
+    // Get spreadsheet data for the dataset
+    const { data, error } = await supabase
+        .from('spreadsheet_data')
+        .select('*')
+        .eq('dataset_id', datasetId)
+        .order('id');
+    
     if (error) return { error, data: null };
+    if (!data || data.length === 0) {
+        return { error: new Error('No data to export'), data: null };
+    }
+
+    // Extract the actual row data from the data column
+    const rows = data.map(item => item.data);
 
     if (format === 'csv') {
-        const headers = Object.keys(data[0] || {});
-        const csv = [
-            headers.join(','),
-            ...data.map((row: any) => headers.map(h => row[h]).join(','))
-        ].join('\n');
-        return { data: new Blob([csv], { type: 'text/csv' }), error: null };
+        // Define the columns we want to export in order
+        const columns = [
+            'timestamp', 'r_sph', 'r_cyl', 'r_axis', 'r_add',
+            'l_sph', 'l_cyl', 'l_axis', 'l_add', 'pd',
+            'chart_number', 'occluder_state', 'chart_display',
+            'substep', 'intent_of_optum', 'confidence_of_optum',
+            'patient_confidence_score', 'flag', 'reason_for_flag'
+        ];
+
+        // Create CSV header
+        const headers = columns.map(h => h.toUpperCase()).join(',');
+
+        // Create CSV rows with proper escaping
+        const csvRows = rows.map(row => {
+            return columns.map(col => {
+                const value = row[col] || '';
+                const stringValue = String(value);
+                // Escape quotes and wrap in quotes if contains comma or quote
+                if (stringValue.includes(',') || stringValue.includes('"') || stringValue.includes('\n')) {
+                    return '"' + stringValue.replace(/"/g, '""') + '"';
+                }
+                return stringValue;
+            }).join(',');
+        });
+
+        const csv = [headers, ...csvRows].join('\n');
+        return { data: new Blob([csv], { type: 'text/csv;charset=utf-8;' }), error: null };
     }
-    return { data: new Blob([JSON.stringify(data)], { type: 'application/json' }), error: null };
+    
+    return { data: new Blob([JSON.stringify(rows, null, 2)], { type: 'application/json' }), error: null };
 };
 
 export const deleteDataset = async (datasetId: number) => {
