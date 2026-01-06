@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabase';
-import { ChevronLeft, RefreshCw, CheckCircle, Clock, Users as UsersIcon, Download } from 'lucide-react';
+import { ChevronLeft, RefreshCw, CheckCircle, Clock, Users as UsersIcon } from 'lucide-react';
 
 interface DatasetProgress {
     dataset_id: number;
@@ -105,49 +105,6 @@ const AdminDashboard = () => {
     const getProgressPercentage = (reviewed: number, total: number) => {
         if (total === 0) return 0;
         return Math.round((reviewed / total) * 100);
-    };
-
-    const exportProgressReport = () => {
-        try {
-            // Create CSV header
-            const headers = ['Dataset Name', 'User Email', 'Rows Reviewed', 'Total Rows', 'Progress %', 'Status', 'Last Saved', 'Submitted At'];
-            
-            // Create CSV rows
-            const csvRows = progressData.flatMap(dataset => 
-                dataset.users.map(user => [
-                    dataset.dataset_name,
-                    user.user_email,
-                    user.rows_reviewed,
-                    dataset.total_rows,
-                    getProgressPercentage(user.rows_reviewed, dataset.total_rows) + '%',
-                    user.is_submitted ? 'Submitted' : 'In Progress',
-                    formatTime(user.last_saved_at),
-                    user.submitted_at ? formatTime(user.submitted_at) : 'N/A'
-                ].join(','))
-            );
-
-            const csv = [headers.join(','), ...csvRows].join('\n');
-            
-            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-            const url = window.URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.setAttribute('download', `labeling_progress_${new Date().toISOString().split('T')[0]}.csv`);
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            window.URL.revokeObjectURL(url);
-        } catch (err) {
-            console.error('Export failed:exportProgressReport}
-                                className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
-                            >
-                                <Download size={18} />
-                                Export Report
-                            </button>
-                            <button
-                                onClick={', err);
-            alert('Failed to export progress report');
-        }
     };
 
     if (loading) {

@@ -86,7 +86,7 @@ export const saveSpreadsheetData = async (datasetId: number, data: any[]) => {
 };
 
 export const exportDataset = async (datasetId: number, format: 'csv' | 'json') => {
-    // Get spreadsheet data for the dataset
+    // Fetch spreadsheet data for the dataset
     const { data, error } = await supabase
         .from('spreadsheet_data')
         .select('*')
@@ -95,10 +95,10 @@ export const exportDataset = async (datasetId: number, format: 'csv' | 'json') =
     
     if (error) return { error, data: null };
     if (!data || data.length === 0) {
-        return { error: new Error('No data to export'), data: null };
+        return { error: new Error('No data found for this dataset'), data: null };
     }
 
-    // Extract the actual row data from the data column
+    // Extract the actual row data from the JSONB column
     const rows = data.map(item => item.data);
 
     if (format === 'csv') {
