@@ -181,13 +181,38 @@ const SpreadsheetLabeling = () => {
 
     const fetchData = async () => {
         try {
-            const { data, error } = await getSpreadsheetData(parseInt(datasetId || '0'));
-            if (error) throw error;
-            if (data) {
-                setRows(data.map((item: any) => item.data) as RowData[]);
+            // Get current user
+            const { data: { user } } = await supabase.auth.getUser();
+            
+            // First, try to fetch user's own labeled data
+            const { data: userData, error: userError } = await getSpreadsheetData(
+                parseInt(datasetId || '0'), 
+                user?.id
+            );
+            
+            if (userError) throw userError;
+            
+            // If user has labeled data, use it
+            if (userData && userData.length > 0) {
+                setRows(userData.map((item: any) => item.data) as RowData[]);
+            } else {
+                // Otherwise, fetch the base dataset (without user filter)
+                const { data: baseData, error: baseError } = await getSpreadsheetData(
+                    parseInt(datasetId || '0')
+                );
+                
+                if (baseError) throw baseError;
+                
+                if (baseData && baseData.length > 0) {
+                    // Use the first available version as template
+                    setRows(baseData.map((item: any) => item.data) as RowData[]);
+                } else {
+                    // No data at all
+                    setRows([]);
+                }
             }
         } catch (err) {
-            console.error('Failed to fetch data');
+            console.error('Failed to fetch data', err);
         } finally {
             setLoading(false);
         }

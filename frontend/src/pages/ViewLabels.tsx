@@ -77,6 +77,7 @@ const ViewLabels = () => {
     const fetchLabeledData = async (datasetId: number) => {
         setLoading(true);
         try {
+            // Fetch all users' data (don't pass userId)
             const { data, error } = await getSpreadsheetData(datasetId);
             if (error) throw error;
             

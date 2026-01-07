@@ -68,12 +68,18 @@ export const saveLabel = async (imageId: number, label: string) => {
     return supabase.from('images').update({ label }).eq('id', imageId);
 };
 
-export const getSpreadsheetData = async (datasetId: number) => {
-    const { data, error } = await supabase
+export const getSpreadsheetData = async (datasetId: number, userId?: string) => {
+    let query = supabase
         .from('spreadsheet_data')
         .select('*')
-        .eq('dataset_id', datasetId)
-        .order('id');
+        .eq('dataset_id', datasetId);
+    
+    // If userId is provided, filter by user
+    if (userId) {
+        query = query.eq('user_id', userId);
+    }
+    
+    const { data, error } = await query.order('id');
     
     return { data, error };
 };
