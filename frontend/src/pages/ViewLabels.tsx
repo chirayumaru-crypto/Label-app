@@ -229,33 +229,22 @@ const ViewLabels = () => {
 
     const getRowBackgroundColor = (flag: string): string => {
         switch (flag) {
+            case 'GREEN':
+                return 'bg-green-50';
             case 'YELLOW':
                 return 'bg-yellow-50';
             case 'RED':
                 return 'bg-red-50';
-            case 'GREEN':
-            case '':
-            case null:
-            case undefined:
             default:
-                return 'bg-green-50'; // No flag = GREEN by default
+                return 'bg-white';
         }
     };
 
     const getEditableCellBg = (flag: string | null): string => {
         // Editable columns should have purple background unless row has a flag color
-        // No flag = GREEN by default
-        if (!flag || flag === '') return 'bg-purple-100'; // Keep purple for editable cells
-        
-        switch (flag) {
-            case 'YELLOW':
-                return 'bg-yellow-100';
-            case 'RED':
-                return 'bg-red-100';
-            case 'GREEN':
-            default:
-                return 'bg-purple-100'; // GREEN rows still use purple for editable cells
-        }
+        if (!flag) return 'bg-purple-100';
+        const rowBg = getRowBackgroundColor(flag);
+        return rowBg || 'bg-purple-100';
     };
 
     // Check if a row is the default configuration
@@ -295,12 +284,6 @@ const ViewLabels = () => {
     const displayValue = (value: string) => {
         if (value === 'nan' || value === '' || !value) return '';
         return value;
-    };
-
-    // Display flag value, showing GREEN for empty flags
-    const displayFlagValue = (flag: string | null): string => {
-        if (!flag || flag === '') return 'GREEN (default)';
-        return flag;
     };
 
     const selectedDataset = datasets.find(d => d.id === selectedDatasetId);
@@ -528,7 +511,7 @@ const ViewLabels = () => {
                                             <td className={`border border-slate-300 px-3 py-2 ${getEditableCellBg(row.flag)} text-slate-700`}>{displayValue(row.intent_of_optum)}</td>
                                             <td className={`border border-slate-300 px-3 py-2 ${getEditableCellBg(row.flag)} text-slate-700`}>{displayValue(row.confidence_of_optum)}</td>
                                             <td className={`border border-slate-300 px-3 py-2 ${getEditableCellBg(row.flag)} text-slate-700`}>{displayValue(row.patient_confidence_score)}</td>
-                                            <td className={`border border-slate-300 px-3 py-2 ${getEditableCellBg(row.flag)} text-slate-700`}>{displayFlagValue(row.flag)}</td>
+                                            <td className={`border border-slate-300 px-3 py-2 ${getEditableCellBg(row.flag)} text-slate-700`}>{displayValue(row.flag)}</td>
                                             <td className={`border border-slate-300 px-3 py-2 ${getEditableCellBg(row.flag)} text-slate-700`}>{displayValue(row.reason_for_flag)}</td>
                                         </tr>
                                         );
