@@ -6,6 +6,7 @@ import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import Labeling from './pages/Labeling';
 import SpreadsheetLabeling from './pages/SpreadsheetLabeling';
+import ViewLabels from './pages/ViewLabels';
 
 const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
     const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
@@ -52,6 +53,11 @@ function App() {
             <Route path="/spreadsheet/:datasetId" element={
                 <PrivateRoute>
                     <SpreadsheetLabeling />
+                </PrivateRoute>
+            } />
+            <Route path="/view-labels" element={
+                <PrivateRoute>
+                    <ViewLabels />
                 </PrivateRoute>
             } />
             <Route path="/" element={<Navigate to="/dashboard" />} />

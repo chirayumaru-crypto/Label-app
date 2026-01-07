@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { getDatasets, createDataset, deleteDataset, signOut, exportDataset } from '../services/api';
 import { supabase } from '../supabase';
 import { Dataset, UserProgress } from '../types';
-import { Upload, Play, Download, Trash2, LogOut, ChevronDown, Users } from 'lucide-react';
+import { Upload, Play, Download, Trash2, LogOut, ChevronDown, Users, Eye } from 'lucide-react';
 
 const Dashboard = () => {
     const [datasets, setDatasets] = useState<Dataset[]>([]);
@@ -260,6 +260,12 @@ const Dashboard = () => {
                         )}
                     </div>
                     <div className="flex items-center gap-2">
+                        <button 
+                            onClick={() => navigate('/view-labels')} 
+                            className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg transition-colors"
+                        >
+                            <Eye size={18} /> View Labeled Data
+                        </button>
                         <button onClick={handleLogout} className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors border border-slate-700">
                             <LogOut size={18} /> Logout
                         </button>
@@ -317,10 +323,27 @@ const Dashboard = () => {
                                                 </div>
                                             </div>
                                             <div className="flex items-center gap-2">
+                                                {/* View Labels Button - visible to all users */}
+                                                <button 
+                                                    onClick={() => navigate(`/view-labels?datasetId=${ds.id}`)} 
+                                                    className="p-2 text-slate-400 hover:text-purple-400 hover:bg-purple-400/10 rounded-lg transition-colors"
+                                                    title="View labeled data"
+                                                >
+                                                    <Eye size={18} />
+                                                </button>
+                                                
+                                                {/* Download Labeled Data - visible to all users */}
+                                                <button 
+                                                    onClick={() => handleExport(ds.id)} 
+                                                    className="p-2 text-slate-400 hover:text-blue-400 hover:bg-blue-400/10 rounded-lg transition-colors"
+                                                    title="Download labeled data"
+                                                >
+                                                    <Download size={18} />
+                                                </button>
+                                                
                                                 {userRole === 'admin' && (
                                                     <>
                                                         <button onClick={() => handleDelete(ds.id)} className="p-2 text-slate-400 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors"><Trash2 size={18} /></button>
-                                                        <button onClick={() => handleExport(ds.id)} className="p-2 text-slate-400 hover:text-primary-400 hover:bg-primary-400/10 rounded-lg transition-colors"><Download size={18} /></button>
                                                         
                                                         {/* User Versions Dropdown */}
                                                         <div className="relative">
