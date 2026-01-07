@@ -19,6 +19,8 @@ export interface Dataset {
     total_rows: number;
     labeled_count: number;
     labelers_count: number;
+    // Optional helper field used in UI to show per-user progress percentage
+    progress_percentage?: number;
 }
 
 export interface LogRow {

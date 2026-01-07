@@ -347,7 +347,7 @@ const Dashboard = () => {
                                 <p className="text-slate-500 text-center py-8">{searchTerm ? 'No datasets matching search.' : 'No datasets uploaded yet.'}</p>
                             ) : (
                                 filteredDatasets.map((ds) => {
-                                    const progress = ds.progress_percentage || (ds.labeled_count / Math.max(1, ds.total_rows)) * 100;
+                                    const progress = (ds as any).progress_percentage ?? (ds.labeled_count / Math.max(1, ds.total_rows)) * 100;
                                     const status = completionStatus[ds.id];
                                     const completedUsers = status?.completedUsers || 0;
                                     const totalUsers = status?.userProgress?.length || 0;
