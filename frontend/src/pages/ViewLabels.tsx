@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { getSpreadsheetData, getDatasets, exportDataset } from '../services/api';
+import { getSpreadsheetData, getDatasets, exportDataset, getDatasetCompletionStatus } from '../services/api';
 import { supabase } from '../supabase';
 import { ChevronLeft, Download, Filter, FileSpreadsheet, Calendar, User, Eye } from 'lucide-react';
 import { Dataset } from '../types';
@@ -40,12 +40,13 @@ const ViewLabels = () => {
     const [selectedDatasetId, setSelectedDatasetId] = useState<number | null>(
         datasetIdParam ? parseInt(datasetIdParam) : null
     );
-    const [userLabels, setUserLabels] = useState<{ user_email: string; row_count: number; user_id: string }[]>([]);
+    const [userLabels, setUserLabels] = useState<{ user_email: string; row_count: number; user_id: string; percentage?: number; is_complete?: boolean }[]>([]);
     const [selectedUserEmail, setSelectedUserEmail] = useState<string | null>(null);
     const [labeledData, setLabeledData] = useState<RowData[]>([]);
     const [loading, setLoading] = useState(false);
     const [viewingData, setViewingData] = useState(false);
     const [user, setUser] = useState<any>(null);
+    const [completionStatus, setCompletionStatus] = useState<{ completedUsers: number; userProgress: any[]; totalRows: number } | null>(null);
 
     useEffect(() => {
         const getUser = async () => {
@@ -79,29 +80,26 @@ const ViewLabels = () => {
         setSelectedUserEmail(null);
         setViewingData(false);
         try {
-            const { data, error } = await getSpreadsheetData(datasetId);
-            if (error) throw error;
-            
-            if (data) {
-                // Group by user and count rows
-                const userMap = new Map<string, { user_email: string; row_count: number; user_id: string }>();
-                
-                data.forEach((item: any) => {
-                    const email = item.user_email || 'Unknown User';
-                    const userId = item.user_id || 'unknown';
-                    
-                    if (userMap.has(email)) {
-                        userMap.get(email)!.row_count++;
-                    } else {
-                        userMap.set(email, {
-                            user_email: email,
-                            user_id: userId,
-                            row_count: 1
-                        });
-                    }
+            // Get completion status first
+            const status = await getDatasetCompletionStatus(datasetId);
+            if (!status.error) {
+                setCompletionStatus({
+                    completedUsers: status.completedUsers,
+                    userProgress: status.userProgress || [],
+                    totalRows: status.totalRows || 0
                 });
                 
-                setUserLabels(Array.from(userMap.values()));
+                // Show only the first 5 users (limit display to max 5)
+                const limitedProgress = status.userProgress?.slice(0, 5) || [];
+                const userLabelsData = limitedProgress.map(p => ({
+                    user_email: p.email,
+                    user_id: p.user_id,
+                    row_count: p.labeled_count,
+                    percentage: p.percentage,
+                    is_complete: p.is_complete
+                }));
+                
+                setUserLabels(userLabelsData);
             }
         } catch (err) {
             console.error('Failed to fetch user labels', err);
@@ -362,9 +360,16 @@ const ViewLabels = () => {
                 ) : !viewingData ? (
                     /* User Cards View */
                     <div>
-                        <h2 className="text-xl font-semibold text-slate-900 mb-4">
-                            Users who labeled this dataset
-                        </h2>
+                        <div className="flex items-center justify-between mb-4">
+                            <h2 className="text-xl font-semibold text-slate-900">
+                                Users who labeled this dataset
+                            </h2>
+                            {completionStatus && completionStatus.completedUsers > 0 && (
+                                <span className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-semibold bg-emerald-100 text-emerald-700 border border-emerald-300">
+                                    {completionStatus.completedUsers}/5 users completed
+                                </span>
+                            )}
+                        </div>
                         {userLabels.length === 0 ? (
                             <div className="bg-blue-50 border border-blue-200 rounded-xl p-12 text-center">
                                 <User size={64} className="mx-auto text-slate-400 mb-4" />
@@ -379,7 +384,7 @@ const ViewLabels = () => {
                                         key={userLabel.user_email} 
                                         className="bg-white border border-slate-300 rounded-xl p-6 hover:shadow-lg transition-shadow"
                                     >
-                                        <div className="flex items-center gap-3 mb-4">
+                                        <div className="flex items-center gap-3 mb-3">
                                             <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold text-lg">
                                                 {userLabel.user_email.charAt(0).toUpperCase()}
                                             </div>
@@ -392,6 +397,30 @@ const ViewLabels = () => {
                                                 </p>
                                             </div>
                                         </div>
+                                        
+                                        {/* Progress bar */}
+                                        <div className="mb-3">
+                                            <div className="flex items-center justify-between mb-1">
+                                                <span className="text-xs text-slate-600">Progress</span>
+                                                <span className="text-xs font-semibold text-slate-900">{userLabel.percentage || 0}%</span>
+                                            </div>
+                                            <div className="h-2 bg-slate-200 rounded-full overflow-hidden">
+                                                <div 
+                                                    className={`h-full transition-all ${userLabel.is_complete ? 'bg-emerald-500' : 'bg-blue-500'}`}
+                                                    style={{ width: `${userLabel.percentage || 0}%` }}
+                                                />
+                                            </div>
+                                        </div>
+                                        
+                                        {/* Completion badge */}
+                                        {userLabel.is_complete && (
+                                            <div className="mb-3">
+                                                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700 border border-emerald-300">
+                                                    ✓ 100% Complete
+                                                </span>
+                                            </div>
+                                        )}
+                                        
                                         <button
                                             onClick={() => fetchUserLabeledData(selectedDatasetId!, userLabel.user_email)}
                                             className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"

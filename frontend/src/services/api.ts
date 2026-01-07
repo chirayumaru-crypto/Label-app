@@ -89,6 +89,9 @@ export const saveSpreadsheetData = async (datasetId: number, data: any[]) => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('User not authenticated');
 
+    // Ensure we have a valid email (not null)
+    const userEmail = user.email || `user_${user.id.substring(0, 8)}`;
+
     // Delete existing data for this dataset and user
     await supabase
         .from('spreadsheet_data')
@@ -96,15 +99,22 @@ export const saveSpreadsheetData = async (datasetId: number, data: any[]) => {
         .eq('dataset_id', datasetId)
         .eq('user_id', user.id);
 
-    // Insert new data with user_id and user_email
+    // Insert new data with user_id and user_email (never null)
     const records = data.map(row => ({
         dataset_id: datasetId,
         user_id: user.id,
-        user_email: user.email,
+        user_email: userEmail,
         data: row,
     }));
 
-    return supabase.from('spreadsheet_data').insert(records);
+    const result = await supabase.from('spreadsheet_data').insert(records);
+    
+    // Update user progress after saving
+    if (!result.error) {
+        await updateDatasetProgress(datasetId, user.id);
+    }
+    
+    return result;
 };
 
 export const exportDataset = async (datasetId: number, format: 'csv' | 'json', userId?: string) => {
@@ -176,4 +186,96 @@ export const getDatasetUserCount = async (datasetId: number) => {
     // Count unique users
     const uniqueUsers = new Set(data?.map(p => p.user_id));
     return { count: uniqueUsers.size, error: null };
+};
+
+export const getDatasetCompletionStatus = async (datasetId: number) => {
+    // Get total rows in dataset
+    const { data: datasetData, error: datasetError } = await supabase
+        .from('datasets')
+        .select('total_rows')
+        .eq('id', datasetId)
+        .single();
+    
+    if (datasetError || !datasetData) return { completedUsers: 0, userProgress: [], error: datasetError };
+    
+    const totalRows = datasetData.total_rows || 0;
+    
+    // Get unique users and their labeled row counts
+    const { data, error } = await supabase
+        .from('spreadsheet_data')
+        .select('user_id, user_email')
+        .eq('dataset_id', datasetId)
+        .not('user_email', 'is', null); // Exclude null emails (Unknown User)
+    
+    if (error) return { completedUsers: 0, userProgress: [], error };
+    
+    // Group by user and count rows
+    const userMap = new Map<string, { email: string; count: number }>();
+    data?.forEach(row => {
+        if (row.user_id && row.user_email) {
+            const existing = userMap.get(row.user_id);
+            if (existing) {
+                existing.count++;
+            } else {
+                userMap.set(row.user_id, { email: row.user_email, count: 1 });
+            }
+        }
+    });
+    
+    // Calculate completion percentage for each user
+    const userProgress = Array.from(userMap.entries()).map(([userId, info]) => ({
+        user_id: userId,
+        email: info.email,
+        labeled_count: info.count,
+        percentage: totalRows > 0 ? Math.round((info.count / totalRows) * 100) : 0,
+        is_complete: info.count >= totalRows
+    }));
+    
+    // Count users who have completed 100%
+    const completedUsers = userProgress.filter(u => u.is_complete).length;
+    
+    return { completedUsers, userProgress, totalRows, error: null };
+};
+
+export const updateDatasetProgress = async (datasetId: number, userId: string) => {
+    // Count labeled rows for this user
+    const { count, error: countError } = await supabase
+        .from('spreadsheet_data')
+        .select('id', { count: 'exact', head: true })
+        .eq('dataset_id', datasetId)
+        .eq('user_id', userId);
+    
+    if (countError) return { error: countError };
+    
+    // Get or create user_progress entry
+    const { data: existing, error: fetchError } = await supabase
+        .from('user_progress')
+        .select('*')
+        .eq('dataset_id', datasetId)
+        .eq('user_id', userId)
+        .maybeSingle();
+    
+    if (fetchError) return { error: fetchError };
+    
+    const labeledCount = count || 0;
+    
+    if (existing) {
+        // Update existing progress
+        return supabase
+            .from('user_progress')
+            .update({ labeled_count: labeledCount })
+            .eq('id', existing.id);
+    } else {
+        // Create new progress entry
+        const { data: { user } } = await supabase.auth.getUser();
+        return supabase
+            .from('user_progress')
+            .insert([{
+                dataset_id: datasetId,
+                user_id: userId,
+                name: user?.email || 'Unknown',
+                labeled_count: labeledCount,
+                percentage: 0
+            }]);
+    }
 };

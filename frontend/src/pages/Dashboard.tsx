@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getDatasets, createDataset, deleteDataset, signOut, exportDataset } from '../services/api';
+import { getDatasets, createDataset, deleteDataset, signOut, exportDataset, getDatasetCompletionStatus } from '../services/api';
 import { supabase } from '../supabase';
 import { Dataset, UserProgress } from '../types';
 import { Upload, Play, Download, Trash2, LogOut, ChevronDown, Users, Eye } from 'lucide-react';
@@ -16,6 +16,7 @@ const Dashboard = () => {
     const [progressMap, setProgressMap] = useState<Record<number, UserProgress[]>>({});
     const [openDropdown, setOpenDropdown] = useState<number | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
+    const [completionStatus, setCompletionStatus] = useState<Record<number, { completedUsers: number; userProgress: any[] }>>({});
 
     useEffect(() => {
         const getUser = async () => {
@@ -47,11 +48,48 @@ const Dashboard = () => {
             const { data, error } = await getDatasets();
             if (error) throw error;
             if (data) {
-                const datasetsWithDefaults = data.map((d: any) => ({ 
-                    ...d, 
-                    total_rows: d.total_rows || 100, 
-                    labeled_count: d.labeled_count || 0 
-                }));
+                // Fetch completion status for each dataset
+                const completionStatusMap: Record<number, { completedUsers: number; userProgress: any[] }> = {};
+                
+                for (const dataset of data) {
+                    const status = await getDatasetCompletionStatus(dataset.id);
+                    if (!status.error) {
+                        completionStatusMap[dataset.id] = {
+                            completedUsers: status.completedUsers,
+                            userProgress: status.userProgress || []
+                        };
+                    }
+                }
+                
+                setCompletionStatus(completionStatusMap);
+                
+                // Filter datasets: show only those with less than 5 completed users
+                const filteredData = data.filter((d: any) => {
+                    const status = completionStatusMap[d.id];
+                    return !status || status.completedUsers < 5;
+                });
+                
+                const datasetsWithDefaults = filteredData.map((d: any) => {
+                    const status = completionStatusMap[d.id];
+                    // Calculate current user's progress if they've labeled this dataset
+                    let labeledCount = d.labeled_count || 0;
+                    let progressPercentage = 0;
+                    
+                    if (status && user) {
+                        const userProg = status.userProgress.find((p: any) => p.user_id === user.id);
+                        if (userProg) {
+                            labeledCount = userProg.labeled_count;
+                            progressPercentage = userProg.percentage;
+                        }
+                    }
+                    
+                    return { 
+                        ...d, 
+                        total_rows: d.total_rows || 100, 
+                        labeled_count: labeledCount,
+                        progress_percentage: progressPercentage
+                    };
+                });
                 setDatasets(datasetsWithDefaults as any);
             }
         } catch (err) {
@@ -307,11 +345,22 @@ const Dashboard = () => {
                                 <p className="text-slate-500 text-center py-8">{searchTerm ? 'No datasets matching search.' : 'No datasets uploaded yet.'}</p>
                             ) : (
                                 filteredDatasets.map((ds) => {
-                                    const progress = (ds.labeled_count / Math.max(1, ds.total_rows)) * 100;
+                                    const progress = ds.progress_percentage || (ds.labeled_count / Math.max(1, ds.total_rows)) * 100;
+                                    const status = completionStatus[ds.id];
+                                    const completedUsers = status?.completedUsers || 0;
+                                    const totalUsers = status?.userProgress?.length || 0;
+                                    
                                     return (
                                         <div key={ds.id} className="bg-slate-900 p-4 rounded-xl border border-slate-700 flex items-center justify-between group hover:border-primary-500/50 transition-all">
                                             <div className="flex-1 min-w-0 mr-4">
-                                                <h3 className="font-semibold text-lg truncate">{ds.name}</h3>
+                                                <div className="flex items-center gap-2 mb-1">
+                                                    <h3 className="font-semibold text-lg truncate">{ds.name}</h3>
+                                                    {completedUsers > 0 && (
+                                                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-900/30 text-emerald-400 border border-emerald-700">
+                                                            {completedUsers}/5 completed
+                                                        </span>
+                                                    )}
+                                                </div>
                                                 <div className="flex items-center gap-4 mt-1">
                                                     <div className="flex items-center gap-2 w-32">
                                                         <div className="h-1.5 flex-1 bg-slate-800 rounded-full overflow-hidden">
@@ -320,6 +369,11 @@ const Dashboard = () => {
                                                         <span className="text-[10px] font-mono text-slate-500">{Math.round(progress)}%</span>
                                                     </div>
                                                     <span className="text-[10px] text-slate-500">{ds.labeled_count}/{ds.total_rows} rows</span>
+                                                    {totalUsers > 0 && (
+                                                        <span className="text-[10px] text-blue-400 flex items-center gap-1">
+                                                            <Users size={10} /> {totalUsers} user{totalUsers > 1 ? 's' : ''}
+                                                        </span>
+                                                    )}
                                                 </div>
                                             </div>
                                             <div className="flex items-center gap-2">
