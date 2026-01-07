@@ -77,11 +77,12 @@ const LabelingGuide = ({ onClose }: { onClose: () => void }) => (
                 </ul>
                 <h4 className="font-bold text-slate-800 mt-4 mb-2">🚦 Flag Colors</h4>
                 <ul className="space-y-1 text-slate-600">
-                    <li><span className="inline-block w-3 h-3 rounded bg-green-500 mr-2"></span><strong>GREEN:</strong> Compulsory steps</li>
-                    <li><span className="inline-block w-3 h-3 rounded bg-yellow-500 mr-2"></span><strong>YELLOW:</strong> Steps can be ignored</li>
-                    <li><span className="inline-block w-3 h-3 rounded bg-red-500 mr-2"></span><strong>RED:</strong> Step to be excluded or not part of eyetest</li>
+                    <li><span className="inline-block w-3 h-3 rounded bg-green-500 mr-2"></span><strong>GREEN:</strong> Compulsory steps <kbd className="ml-2 px-2 py-0.5 bg-slate-200 rounded text-xs font-mono">Shift+3</kbd></li>
+                    <li><span className="inline-block w-3 h-3 rounded bg-yellow-500 mr-2"></span><strong>YELLOW:</strong> Optional/Minor issues <kbd className="ml-2 px-2 py-0.5 bg-slate-200 rounded text-xs font-mono">Shift+2</kbd></li>
+                    <li><span className="inline-block w-3 h-3 rounded bg-red-500 mr-2"></span><strong>RED:</strong> Major issues/Needs attention <kbd className="ml-2 px-2 py-0.5 bg-slate-200 rounded text-xs font-mono">Shift+1</kbd></li>
                 </ul>
                 <p className="mt-2 text-slate-500 italic">Reason_For_Flag: Mark your reason when flagging a row</p>
+                <p className="mt-2 text-xs text-blue-600 font-semibold">💡 Tip: Click on any cell in a row, then use Shift+1/2/3 to quickly set flags!</p>
                 <div className="mt-4 p-3 bg-yellow-100 border border-yellow-300 rounded-lg">
                     <p className="text-yellow-800 font-semibold">⚠️ Important: Your changes are auto-saved every 5 seconds. Click "Save All" button to ensure all your work is saved before leaving.</p>
                 </div>
@@ -163,6 +164,7 @@ const SpreadsheetLabeling = () => {
     const [showGuide, setShowGuide] = useState(true);
     const [lastSaved, setLastSaved] = useState<Date | null>(null);
     const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+    const [focusedRowId, setFocusedRowId] = useState<number | null>(null);
 
     useEffect(() => {
         fetchData();
@@ -178,6 +180,33 @@ const SpreadsheetLabeling = () => {
 
         return () => clearInterval(autosaveInterval);
     }, [hasUnsavedChanges]); // Only depend on hasUnsavedChanges to avoid re-creating interval
+
+    // Keyboard shortcuts for flags: Shift+1=RED, Shift+2=YELLOW, Shift+3=GREEN
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.shiftKey && focusedRowId !== null) {
+                let flagValue: string | null = null;
+                
+                if (e.key === '!' || e.key === '1') { // Shift+1
+                    flagValue = 'RED';
+                    e.preventDefault();
+                } else if (e.key === '@' || e.key === '2') { // Shift+2
+                    flagValue = 'YELLOW';
+                    e.preventDefault();
+                } else if (e.key === '#' || e.key === '3') { // Shift+3
+                    flagValue = 'GREEN';
+                    e.preventDefault();
+                }
+                
+                if (flagValue) {
+                    handleCellChange(focusedRowId, 'flag', flagValue);
+                }
+            }
+        };
+        
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [focusedRowId, rows]);
 
     const fetchData = async () => {
         try {
@@ -460,8 +489,7 @@ const SpreadsheetLabeling = () => {
                                         <input
                                             type="text"
                                             value={row.substep}
-                                            onChange={(e) => handleCellChange(row.id, 'substep', e.target.value)}
-                                            placeholder="Description of step"
+                                            onChange={(e) => handleCellChange(row.id, 'substep', e.target.value)}                                            onFocus={() => setFocusedRowId(row.id)}                                            placeholder="Description of step"
                                             className={`w-full ${getEditableCellBg(row.flag)} border-0 px-2 py-1 text-slate-900 focus:outline-none focus:ring-1 focus:ring-purple-500`}
                                         />
                                     </td>
@@ -469,8 +497,7 @@ const SpreadsheetLabeling = () => {
                                         <input
                                             type="text"
                                             value={row.intent_of_optum}
-                                            onChange={(e) => handleCellChange(row.id, 'intent_of_optum', e.target.value)}
-                                            placeholder="What Optum is thinking/doing"
+                                            onChange={(e) => handleCellChange(row.id, 'intent_of_optum', e.target.value)}                                            onFocus={() => setFocusedRowId(row.id)}                                            placeholder="What Optum is thinking/doing"
                                             className={`w-full ${getEditableCellBg(row.flag)} border-0 px-2 py-1 text-slate-900 focus:outline-none focus:ring-1 focus:ring-purple-500`}
                                         />
                                     </td>
@@ -481,6 +508,7 @@ const SpreadsheetLabeling = () => {
                                             max="10"
                                             value={row.confidence_of_optum}
                                             onChange={(e) => handleCellChange(row.id, 'confidence_of_optum', e.target.value)}
+                                            onFocus={() => setFocusedRowId(row.id)}
                                             placeholder="0-10"
                                             className={`w-full ${getEditableCellBg(row.flag)} border-0 px-2 py-1 text-slate-900 focus:outline-none focus:ring-1 focus:ring-purple-500`}
                                         />
@@ -492,6 +520,7 @@ const SpreadsheetLabeling = () => {
                                             max="10"
                                             value={row.patient_confidence_score}
                                             onChange={(e) => handleCellChange(row.id, 'patient_confidence_score', e.target.value)}
+                                            onFocus={() => setFocusedRowId(row.id)}
                                             placeholder="0-10"
                                             className={`w-full ${getEditableCellBg(row.flag)} border-0 px-2 py-1 text-slate-900 focus:outline-none focus:ring-1 focus:ring-purple-500`}
                                         />
@@ -500,6 +529,7 @@ const SpreadsheetLabeling = () => {
                                         <select
                                             value={row.flag}
                                             onChange={(e) => handleCellChange(row.id, 'flag', e.target.value)}
+                                            onFocus={() => setFocusedRowId(row.id)}
                                             className={`w-full ${getEditableCellBg(row.flag)} border-0 px-2 py-1 text-slate-900 focus:outline-none focus:ring-1 focus:ring-purple-500`}
                                         >
                                             <option value="">-</option>
@@ -513,6 +543,7 @@ const SpreadsheetLabeling = () => {
                                             type="text"
                                             value={row.reason_for_flag}
                                             onChange={(e) => handleCellChange(row.id, 'reason_for_flag', e.target.value)}
+                                            onFocus={() => setFocusedRowId(row.id)}
                                             placeholder="Reason for flag"
                                             className={`w-full ${getEditableCellBg(row.flag)} border-0 px-2 py-1 text-slate-900 focus:outline-none focus:ring-1 focus:ring-purple-500`}
                                         />
