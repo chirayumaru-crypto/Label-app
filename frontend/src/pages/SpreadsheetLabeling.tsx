@@ -221,9 +221,16 @@ const SpreadsheetLabeling = () => {
             
             if (userError) throw userError;
             
-            // If user has labeled data, use it
+            // If user has labeled data, use it (normalize missing flags to GREEN for UI)
             if (userData && userData.length > 0) {
-                setRows(userData.map((item: any) => item.data) as RowData[]);
+                setRows(userData.map((item: any) => {
+                    const d = item.data || {};
+                    return ({
+                        ...d,
+                        flag: (d.flag && String(d.flag).trim()) ? d.flag : 'GREEN',
+                        reason_for_flag: d.reason_for_flag || ''
+                    }) as RowData;
+                }));
             } else {
                 // Otherwise, fetch the base dataset (without user filter)
                 const { data: baseData, error: baseError } = await getSpreadsheetData(
@@ -233,8 +240,15 @@ const SpreadsheetLabeling = () => {
                 if (baseError) throw baseError;
                 
                 if (baseData && baseData.length > 0) {
-                    // Use the first available version as template
-                    setRows(baseData.map((item: any) => item.data) as RowData[]);
+                    // Use the first available version as template; show GREEN flag by default in UI
+                    setRows(baseData.map((item: any) => {
+                        const d = item.data || {};
+                        return ({
+                            ...d,
+                            flag: (d.flag && String(d.flag).trim()) ? d.flag : 'GREEN',
+                            reason_for_flag: d.reason_for_flag || ''
+                        }) as RowData;
+                    }));
                 } else {
                     // No data at all
                     setRows([]);
