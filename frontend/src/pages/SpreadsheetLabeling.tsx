@@ -70,52 +70,68 @@ const LabelingGuide = ({ onClose }: { onClose: () => void }) => (
             <div>
                 <h4 className="font-bold text-slate-800 mb-2">📝 Column Descriptions</h4>
                 <ul className="space-y-1 text-slate-600">
-                    <li><strong>Substep:</strong> Description of the step being performed</li>
-                    <li><strong>Intent_of_Optum:</strong> What is Optum thinking and doing</li>
-                    <li><strong>Confidence_of_Optum:</strong> Scale 0-10 (0=lowest, 10=highest)</li>
-                    <li><strong>Patient_Confidence_Score:</strong> How accurate patient is about their reply (0-10)</li>
+                    <li><strong>Substep:</strong> Part of Eye Test (e.g., JCC, Duochrome)</li>
+                    <li><strong>Intent_of_Optum:</strong> What is Optum thinking/doing based on customer response</li>
+                    <li><strong>Confidence_of_Optum:</strong> 0-10 (defaults to 10)</li>
+                    <li><strong>Patient_Confidence_Score:</strong> 0-10 (defaults to 10)</li>
                 </ul>
                 <h4 className="font-bold text-slate-800 mt-4 mb-2">🚦 Flag Colors</h4>
                 <ul className="space-y-1 text-slate-600">
-                    <li><span className="inline-block w-3 h-3 rounded bg-green-500 mr-2"></span><strong>GREEN:</strong> Compulsory steps <kbd className="ml-2 px-2 py-0.5 bg-slate-200 rounded text-xs font-mono">Shift+3</kbd></li>
-                    <li><span className="inline-block w-3 h-3 rounded bg-yellow-500 mr-2"></span><strong>YELLOW:</strong> Optional/Minor issues <kbd className="ml-2 px-2 py-0.5 bg-slate-200 rounded text-xs font-mono">Shift+2</kbd></li>
-                    <li><span className="inline-block w-3 h-3 rounded bg-red-500 mr-2"></span><strong>RED:</strong> Major issues/Needs attention <kbd className="ml-2 px-2 py-0.5 bg-slate-200 rounded text-xs font-mono">Shift+1</kbd></li>
+                    <li><span className="inline-block w-3 h-3 rounded bg-green-500 mr-2"></span><strong>🟢 No Flag = GREEN (default)</strong></li>
+                    <li><span className="inline-block w-3 h-3 rounded bg-yellow-500 mr-2"></span><strong>YELLOW:</strong> Can be ignored <kbd className="ml-2 px-2 py-0.5 bg-slate-200 rounded text-xs font-mono">Shift+2</kbd></li>
+                    <li><span className="inline-block w-3 h-3 rounded bg-red-500 mr-2"></span><strong>RED:</strong> Exclude from eyetest <kbd className="ml-2 px-2 py-0.5 bg-slate-200 rounded text-xs font-mono">Shift+1</kbd></li>
                 </ul>
-                <p className="mt-2 text-slate-500 italic">Reason_For_Flag: Mark your reason when flagging a row</p>
-                <p className="mt-2 text-xs text-blue-600 font-semibold">💡 Tip: Click on any cell in a row, then use Shift+1/2/3 to quickly set flags!</p>
-                <div className="mt-4 p-3 bg-yellow-100 border border-yellow-300 rounded-lg">
-                    <p className="text-yellow-800 font-semibold">⚠️ Important: Your changes are auto-saved every 5 seconds. Click "Save All" button to ensure all your work is saved before leaving.</p>
+                <p className="mt-2 text-slate-500 italic">Marking GREEN is optional - unmarked rows are GREEN</p>
+                
+                <h4 className="font-bold text-slate-800 mt-4 mb-2">⌨️ Keyboard Shortcuts</h4>
+                <ul className="space-y-1 text-slate-600">
+                    <li><strong>Enter</strong> → Next row (first input)</li>
+                    <li><strong>Tab</strong> → Next field (right)</li>
+                    <li><strong>Shift+Tab</strong> → Previous field</li>
+                </ul>
+                
+                <h4 className="font-bold text-slate-800 mt-4 mb-2">📱 Quick Actions</h4>
+                <ul className="space-y-1 text-slate-600">
+                    <li><strong>Click Display cell</strong> → Mark as "Same as Previous" (hides duplicate)</li>
+                </ul>
+                
+                <div className="mt-4 p-3 bg-green-100 border border-green-300 rounded-lg">
+                    <p className="text-green-800 font-semibold">✓ Data is auto-saved continuously</p>
                 </div>
             </div>
         </div>
     </div>
 );
 
-// Get row background color based on flag
+// Get row background color based on flag (empty/no flag = GREEN by default)
 const getRowBackgroundColor = (flag: string): string => {
     switch (flag) {
-        case 'GREEN':
-            return 'bg-green-50';
         case 'YELLOW':
             return 'bg-yellow-50';
         case 'RED':
             return 'bg-red-50';
+        case 'GREEN':
+        case '':
+        case null:
+        case undefined:
         default:
-            return 'bg-white';
+            return 'bg-green-50'; // No flag = GREEN by default
     }
 };
 
-// Get cell background for editable cells based on flag
+// Get cell background for editable cells based on flag (empty/no flag = GREEN by default)
 const getEditableCellBg = (flag: string): string => {
     switch (flag) {
-        case 'GREEN':
-            return 'bg-green-100';
         case 'YELLOW':
             return 'bg-yellow-100';
         case 'RED':
             return 'bg-red-100';
+        case 'GREEN':
+        case '':
+        case null:
+        case undefined:
         default:
-            return 'bg-white';
+            return 'bg-green-100'; // No flag = GREEN by default
     }
 };
 
@@ -181,9 +197,29 @@ const SpreadsheetLabeling = () => {
         return () => clearInterval(autosaveInterval);
     }, [hasUnsavedChanges]); // Only depend on hasUnsavedChanges to avoid re-creating interval
 
-    // Keyboard shortcuts for flags: Shift+1=RED, Shift+2=YELLOW, Shift+3=GREEN
+    // Keyboard shortcuts for flags: Shift+1=RED, Shift+2=YELLOW, Shift+3=GREEN, Enter=Next Row
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
+            // Handle Enter key for navigation to next row
+            if (e.key === 'Enter' && focusedRowId !== null) {
+                e.preventDefault();
+                const currentIndex = rows.findIndex(row => row.id === focusedRowId);
+                const nextIndex = currentIndex + 1;
+                if (nextIndex < rows.length) {
+                    const nextRowId = rows[nextIndex].id;
+                    // Focus the first editable field in the next row
+                    setTimeout(() => {
+                        const nextInput = document.querySelector(`input[data-row-id="${nextRowId}"]`) as HTMLInputElement;
+                        if (nextInput) {
+                            nextInput.focus();
+                            setFocusedRowId(nextRowId);
+                        }
+                    }, 100);
+                }
+                return;
+            }
+            
+            // Handle flag shortcuts
             if (e.shiftKey && focusedRowId !== null) {
                 let flagValue: string | null = null;
                 
@@ -201,6 +237,7 @@ const SpreadsheetLabeling = () => {
                 if (flagValue) {
                     handleCellChange(focusedRowId, 'flag', flagValue);
                 }
+            }
             }
         };
         
@@ -233,8 +270,19 @@ const SpreadsheetLabeling = () => {
                 if (baseError) throw baseError;
                 
                 if (baseData && baseData.length > 0) {
-                    // Use the first available version as template
-                    setRows(baseData.map((item: any) => item.data) as RowData[]);
+                    // Use the first available version as template and set default values
+                    const processedData = baseData.map((item: any) => {
+                        const rowData = item.data;
+                        // Set default values for confidence fields if they're empty
+                        if (!rowData.confidence_of_optum || rowData.confidence_of_optum === '') {
+                            rowData.confidence_of_optum = '10';
+                        }
+                        if (!rowData.patient_confidence_score || rowData.patient_confidence_score === '') {
+                            rowData.patient_confidence_score = '10';
+                        }
+                        return rowData;
+                    });
+                    setRows(processedData as RowData[]);
                 } else {
                     // No data at all
                     setRows([]);
@@ -244,6 +292,16 @@ const SpreadsheetLabeling = () => {
             console.error('Failed to fetch data', err);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleSameAsPrevious = (rowId: number) => {
+        const currentIndex = rows.findIndex(row => row.id === rowId);
+        if (currentIndex > 0) {
+            const previousRow = rows[currentIndex - 1];
+            handleCellChange(rowId, 'chart_display', previousRow.chart_display);
+            // Visual feedback
+            setHasUnsavedChanges(true);
         }
     };
 
@@ -479,7 +537,13 @@ const SpreadsheetLabeling = () => {
                                     <td className={`border border-slate-300 px-3 py-2 ${hasChanged(row, previousRow, 'pd') ? 'bg-yellow-200' : rowBgClass} text-slate-700`}>{displayValue(row.pd)}</td>
                                     <td className={`border border-slate-300 px-3 py-2 ${hasChanged(row, previousRow, 'chart_number') ? 'bg-yellow-200' : rowBgClass} text-slate-700`}>{displayValue(row.chart_number)}</td>
                                     <td className={`border border-slate-300 px-3 py-2 ${hasChanged(row, previousRow, 'occluder_state') ? 'bg-yellow-200' : rowBgClass} text-slate-700`}>{displayValue(row.occluder_state)}</td>
-                                    <td className={`border border-slate-300 px-3 py-2 ${hasChanged(row, previousRow, 'chart_display') ? 'bg-yellow-200' : rowBgClass} text-slate-700`}>{displayValue(row.chart_display)}</td>
+                                    <td 
+                                        className={`border border-slate-300 px-3 py-2 ${hasChanged(row, previousRow, 'chart_display') ? 'bg-yellow-200' : rowBgClass} text-slate-700 cursor-pointer hover:bg-blue-100 transition-colors`}
+                                        onClick={() => handleSameAsPrevious(row.id)}
+                                        title="Click to mark as 'Same as Previous'"
+                                    >
+                                        {displayValue(row.chart_display)}
+                                    </td>
                                     {/* speaker removed */}
                                     {/* utterance_text removed */}
                                     {/* translation_in_en removed */}
@@ -489,7 +553,10 @@ const SpreadsheetLabeling = () => {
                                         <input
                                             type="text"
                                             value={row.substep}
-                                            onChange={(e) => handleCellChange(row.id, 'substep', e.target.value)}                                            onFocus={() => setFocusedRowId(row.id)}                                            placeholder="Description of step"
+                                            onChange={(e) => handleCellChange(row.id, 'substep', e.target.value)}
+                                            onFocus={() => setFocusedRowId(row.id)}
+                                            data-row-id={row.id}
+                                            placeholder="Part of Eye Test (e.g., JCC, Duochrome)"
                                             className={`w-full ${getEditableCellBg(row.flag)} border-0 px-2 py-1 text-slate-900 focus:outline-none focus:ring-1 focus:ring-purple-500`}
                                         />
                                     </td>
@@ -506,10 +573,10 @@ const SpreadsheetLabeling = () => {
                                             type="number"
                                             min="0"
                                             max="10"
-                                            value={row.confidence_of_optum}
+                                            value={row.confidence_of_optum || '10'}
                                             onChange={(e) => handleCellChange(row.id, 'confidence_of_optum', e.target.value)}
                                             onFocus={() => setFocusedRowId(row.id)}
-                                            placeholder="0-10"
+                                            placeholder="0-10 (defaults to 10)"
                                             className={`w-full ${getEditableCellBg(row.flag)} border-0 px-2 py-1 text-slate-900 focus:outline-none focus:ring-1 focus:ring-purple-500`}
                                         />
                                     </td>
@@ -518,10 +585,10 @@ const SpreadsheetLabeling = () => {
                                             type="number"
                                             min="0"
                                             max="10"
-                                            value={row.patient_confidence_score}
+                                            value={row.patient_confidence_score || '10'}
                                             onChange={(e) => handleCellChange(row.id, 'patient_confidence_score', e.target.value)}
                                             onFocus={() => setFocusedRowId(row.id)}
-                                            placeholder="0-10"
+                                            placeholder="0-10 (defaults to 10)"
                                             className={`w-full ${getEditableCellBg(row.flag)} border-0 px-2 py-1 text-slate-900 focus:outline-none focus:ring-1 focus:ring-purple-500`}
                                         />
                                     </td>
@@ -532,8 +599,7 @@ const SpreadsheetLabeling = () => {
                                             onFocus={() => setFocusedRowId(row.id)}
                                             className={`w-full ${getEditableCellBg(row.flag)} border-0 px-2 py-1 text-slate-900 focus:outline-none focus:ring-1 focus:ring-purple-500`}
                                         >
-                                            <option value="">-</option>
-                                            <option value="GREEN">🟢 GREEN</option>
+                                            <option value="">🟢 No Flag (GREEN)</option>
                                             <option value="YELLOW">🟡 YELLOW</option>
                                             <option value="RED">🔴 RED</option>
                                         </select>
