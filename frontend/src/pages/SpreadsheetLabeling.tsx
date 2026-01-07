@@ -174,10 +174,10 @@ const SpreadsheetLabeling = () => {
         
         const autosaveInterval = setInterval(() => {
             handleSave(true);
-        }, 5000);
+        }, 5000); // Autosave every 5 seconds
 
         return () => clearInterval(autosaveInterval);
-    }, [rows, hasUnsavedChanges]);
+    }, [hasUnsavedChanges]); // Only depend on hasUnsavedChanges to avoid re-creating interval
 
     const fetchData = async () => {
         try {
@@ -349,11 +349,18 @@ const SpreadsheetLabeling = () => {
                     </button>
                     <div>
                         <h1 className="font-bold text-lg">Spreadsheet Labeling</h1>
-                        {lastSaved && (
-                            <p className="text-xs text-slate-500">
-                                Last saved: {lastSaved.toLocaleTimeString()}
-                            </p>
-                        )}
+                        <div className="flex items-center gap-2">
+                            {lastSaved && (
+                                <p className="text-xs text-slate-500">
+                                    Last saved: {lastSaved.toLocaleTimeString()}
+                                </p>
+                            )}
+                            {hasUnsavedChanges && (
+                                <span className="text-xs text-amber-600 font-medium">
+                                    • Unsaved changes (autosaving every 5s)
+                                </span>
+                            )}
+                        </div>
                     </div>
                 </div>
                 <div className="flex items-center gap-3">

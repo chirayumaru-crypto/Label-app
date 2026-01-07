@@ -200,19 +200,30 @@ export const getDatasetCompletionStatus = async (datasetId: number) => {
     
     const totalRows = datasetData.total_rows || 0;
     
-    // Get unique users and their labeled row counts
+    // Get all user data with full row data
     const { data, error } = await supabase
         .from('spreadsheet_data')
-        .select('user_id, user_email')
+        .select('user_id, user_email, data')
         .eq('dataset_id', datasetId)
         .not('user_email', 'is', null); // Exclude null emails (Unknown User)
     
     if (error) return { completedUsers: 0, userProgress: [], error };
     
-    // Group by user and count rows
+    // Helper function to check if a row is actually labeled
+    const isRowLabeled = (rowData: any): boolean => {
+        if (!rowData) return false;
+        // A row is considered labeled if it has at least one editable field filled
+        const editableFields = ['substep', 'intent_of_optum', 'flag', 'confidence_of_optum', 'patient_confidence_score', 'reason_for_flag'];
+        return editableFields.some(field => {
+            const value = rowData[field];
+            return value && value.toString().trim() !== '';
+        });
+    };
+    
+    // Group by user and count LABELED rows (not just saved rows)
     const userMap = new Map<string, { email: string; count: number }>();
     data?.forEach(row => {
-        if (row.user_id && row.user_email) {
+        if (row.user_id && row.user_email && isRowLabeled(row.data)) {
             const existing = userMap.get(row.user_id);
             if (existing) {
                 existing.count++;
@@ -238,14 +249,26 @@ export const getDatasetCompletionStatus = async (datasetId: number) => {
 };
 
 export const updateDatasetProgress = async (datasetId: number, userId: string) => {
-    // Count labeled rows for this user
-    const { count, error: countError } = await supabase
+    // Get all rows for this user to count only labeled ones
+    const { data: userRows, error: countError } = await supabase
         .from('spreadsheet_data')
-        .select('id', { count: 'exact', head: true })
+        .select('data')
         .eq('dataset_id', datasetId)
         .eq('user_id', userId);
     
     if (countError) return { error: countError };
+    
+    // Count only rows that have been actually labeled (non-empty editable fields)
+    const isRowLabeled = (rowData: any): boolean => {
+        if (!rowData) return false;
+        const editableFields = ['substep', 'intent_of_optum', 'flag', 'confidence_of_optum', 'patient_confidence_score', 'reason_for_flag'];
+        return editableFields.some(field => {
+            const value = rowData[field];
+            return value && value.toString().trim() !== '';
+        });
+    };
+    
+    const labeledCount = userRows?.filter(row => isRowLabeled(row.data)).length || 0;
     
     // Get or create user_progress entry
     const { data: existing, error: fetchError } = await supabase
@@ -256,8 +279,6 @@ export const updateDatasetProgress = async (datasetId: number, userId: string) =
         .maybeSingle();
     
     if (fetchError) return { error: fetchError };
-    
-    const labeledCount = count || 0;
     
     if (existing) {
         // Update existing progress
