@@ -116,15 +116,23 @@ const ViewLabels = () => {
             if (error) throw error;
             
             if (data) {
-                // Filter data for specific user
-                const rows = data
-                    .filter((item: any) => item.user_email === userEmail)
-                    .map((item: any) => ({
-                        ...item.data,
-                        user_email: item.user_email,
-                        id: item.id
-                    }));
-                
+                // Filter data for specific user and deduplicate by logical row id (item.data.id)
+                const byLogicalId = new Map<number, any>();
+                data.forEach((item: any) => {
+                    if (item.user_email !== userEmail) return;
+                    const logicalId = (item.data && (item.data.id ?? item.data.row_index)) ?? item.id;
+                    if (!byLogicalId.has(logicalId)) {
+                        const row = {
+                            ...item.data,
+                            user_email: item.user_email,
+                            id: logicalId,
+                            flag: (item.data && (item.data.flag || 'GREEN')) || 'GREEN'
+                        };
+                        byLogicalId.set(logicalId, row);
+                    }
+                });
+
+                const rows = Array.from(byLogicalId.values()).sort((a, b) => (a.id || 0) - (b.id || 0));
                 setLabeledData(rows);
                 setSelectedUserEmail(userEmail);
             }
@@ -143,19 +151,32 @@ const ViewLabels = () => {
             if (error) throw error;
             
             if (data) {
-                // Extract data from the JSONB column and filter only labeled rows
-                const rows = data
-                    .map((item: any) => ({
+                // Extract data from the JSONB column, dedupe by logical row id and prefer labeled/user rows
+                const byLogicalId = new Map<number, any>();
+                data.forEach((item: any) => {
+                    const logicalId = (item.data && (item.data.id ?? item.data.row_index)) ?? item.id;
+                    const rowObj = {
                         ...item.data,
                         user_id: item.user_id,
                         user_email: item.user_email,
-                        id: item.id
-                    }))
-                    .filter((row: RowData) => {
-                        // Only show rows that have been labeled (have at least step or substep)
-                        return row.step || row.substep || row.flag;
-                    });
-                
+                        id: logicalId,
+                        flag: (item.data && (item.data.flag || 'GREEN')) || 'GREEN'
+                    };
+
+                    // Only keep rows that are actually labeled (have editable fields)
+                    const isLabeled = rowObj.step || rowObj.substep || rowObj.flag;
+                    if (!isLabeled) return;
+
+                    const existing = byLogicalId.get(logicalId);
+                    // Prefer rows with a user_id (user-labeled) over template rows
+                    if (!existing) {
+                        byLogicalId.set(logicalId, rowObj);
+                    } else if (!existing.user_id && rowObj.user_id) {
+                        byLogicalId.set(logicalId, rowObj);
+                    }
+                });
+
+                const rows = Array.from(byLogicalId.values()).sort((a, b) => (a.id || 0) - (b.id || 0));
                 setLabeledData(rows);
             }
         } catch (err) {
