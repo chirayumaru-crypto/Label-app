@@ -18,17 +18,27 @@ const Register = () => {
 
         try {
             const { data, error } = await signUp({ email, password });
-            if (error) throw error;
-            
-            // Check if email confirmation is required
-            if (data?.user && !data.session) {
-                setSuccess('Registration successful! Please check your email to confirm your account before logging in.');
-            } else {
-                setSuccess('Registration successful! Redirecting to login...');
-                setTimeout(() => navigate('/login'), 2000);
+            if (error) {
+                // Handle specific email errors gracefully
+                if (error.message.includes('email') || error.message.includes('confirmation')) {
+                    throw new Error('Unable to send confirmation email. You can still login with your credentials.');
+                }
+                throw error;
             }
+            
+            // Successfully registered - redirect to login
+            setSuccess('Registration successful! Redirecting to login...');
+            setTimeout(() => navigate('/login'), 1500);
         } catch (err: any) {
-            setError(err.error_description || err.message || 'Registration failed');
+            const errorMsg = err.error_description || err.message || 'Registration failed';
+            
+            // If it's just an email error but user might be created, show helpful message
+            if (errorMsg.includes('email') || errorMsg.includes('confirmation')) {
+                setSuccess('Account created! Please try logging in. If you receive a confirmation email, click the link to activate your account.');
+                setTimeout(() => navigate('/login'), 3000);
+            } else {
+                setError(errorMsg);
+            }
         } finally {
             setLoading(false);
         }

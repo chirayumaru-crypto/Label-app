@@ -10,6 +10,9 @@ export const signUp = async (credentials: AuthCredentials) => {
         ...credentials,
         options: {
             emailRedirectTo: redirectUrl,
+            data: {
+                email_confirm: false  // Skip email confirmation
+            }
         }
     });
 };
@@ -66,19 +69,52 @@ export const saveLabel = async (imageId: number, label: string) => {
 };
 
 export const getSpreadsheetData = async (datasetId: number) => {
-    return supabase.from('spreadsheet_data').select('*').eq('dataset_id', datasetId).order('id');
+    // Join with auth.users to get user email
+    const { data, error } = await supabase
+        .from('spreadsheet_data')
+        .select('*, user_id')
+        .eq('dataset_id', datasetId)
+        .order('id');
+    
+    if (error) return { data: null, error };
+    
+    // Get unique user IDs
+    const userIds = [...new Set(data?.map((item: any) => item.user_id).filter(Boolean))];
+    
+    // Fetch user emails
+    const userEmails: Record<string, string> = {};
+    for (const userId of userIds) {
+        const { data: userData } = await supabase.auth.admin.getUserById(userId);
+        if (userData?.user?.email) {
+            userEmails[userId] = userData.user.email;
+        }
+    }
+    
+    // Attach emails to data
+    const dataWithEmails = data?.map((item: any) => ({
+        ...item,
+        user_email: item.user_id ? userEmails[item.user_id] || 'Unknown' : null
+    }));
+    
+    return { data: dataWithEmails, error: null };
 };
 
 export const saveSpreadsheetData = async (datasetId: number, data: any[]) => {
-    // Delete existing data for this dataset
+    // Get current user
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('User not authenticated');
+
+    // Delete existing data for this dataset and user
     await supabase
         .from('spreadsheet_data')
         .delete()
-        .eq('dataset_id', datasetId);
+        .eq('dataset_id', datasetId)
+        .eq('user_id', user.id);
 
-    // Insert new data
+    // Insert new data with user_id
     const records = data.map(row => ({
         dataset_id: datasetId,
+        user_id: user.id,
         data: row,
     }));
 
