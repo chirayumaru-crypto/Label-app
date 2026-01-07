@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { getSpreadsheetData, getDatasets, exportDataset } from '../services/api';
 import { supabase } from '../supabase';
-import { ChevronLeft, Download, Filter, FileSpreadsheet, Calendar, User } from 'lucide-react';
+import { ChevronLeft, Download, Filter, FileSpreadsheet, Calendar, User, Eye } from 'lucide-react';
 import { Dataset } from '../types';
 
 interface RowData {
@@ -424,7 +424,7 @@ const ViewLabels = () => {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {filteredData.map((row, index) => (
+                                    {labeledData.map((row, index) => (
                                         <tr 
                                             key={row.id} 
                                             className={`border-b border-white/10 hover:bg-white/5 transition-colors ${getRowBackgroundColor(row.flag)}`}
