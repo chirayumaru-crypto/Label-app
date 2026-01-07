@@ -28,7 +28,7 @@ interface RowData {
     flag: string;
     reason_for_flag: string;
     user_id?: string;
-    user_name?: string;
+    user_email?: string;
 }
 
 const ViewLabels = () => {
@@ -44,6 +44,7 @@ const ViewLabels = () => {
     const [loading, setLoading] = useState(false);
     const [filterFlag, setFilterFlag] = useState<string>('all');
     const [filterStep, setFilterStep] = useState<string>('all');
+    const [filterUser, setFilterUser] = useState<string>('all');
     const [user, setUser] = useState<any>(null);
 
     useEffect(() => {
@@ -85,6 +86,7 @@ const ViewLabels = () => {
                     .map((item: any) => ({
                         ...item.data,
                         user_id: item.user_id,
+                        user_email: item.user_email,
                         id: item.id
                     }))
                     .filter((row: RowData) => {
@@ -190,10 +192,12 @@ const ViewLabels = () => {
     const filteredData = labeledData.filter(row => {
         if (filterFlag !== 'all' && row.flag !== filterFlag) return false;
         if (filterStep !== 'all' && row.step !== filterStep) return false;
+        if (filterUser !== 'all' && row.user_email !== filterUser) return false;
         return true;
     });
 
     const uniqueSteps = Array.from(new Set(labeledData.map(row => row.step).filter(Boolean)));
+    const uniqueUsers = Array.from(new Set(labeledData.map(row => row.user_email).filter(Boolean)));
 
     const selectedDataset = datasets.find(d => d.id === selectedDatasetId);
 
@@ -327,6 +331,23 @@ const ViewLabels = () => {
                         </div>
                     </div>
 
+                    {/* Show unique users who labeled this dataset */}
+                    {selectedDatasetId && uniqueUsers.length > 0 && (
+                        <div className="mt-3 pt-3 border-t border-white/20">
+                            <p className="text-slate-300 text-xs mb-1">Labeled by:</p>
+                            <div className="flex flex-wrap gap-2">
+                                {uniqueUsers.map(email => (
+                                    <span 
+                                        key={email} 
+                                        className="px-2 py-1 bg-white/10 rounded text-xs text-slate-200 border border-white/20"
+                                    >
+                                        {email}
+                                    </span>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
                     {/* Stats */}
                     {selectedDatasetId && (
                         <div className="mt-4 flex gap-4 text-white">
@@ -358,65 +379,94 @@ const ViewLabels = () => {
                         </p>
                     </div>
                 ) : (
-                    <div className="bg-white/10 backdrop-blur-md rounded-xl p-6 overflow-x-auto">
-                        <table className="w-full text-sm">
-                            <thead>
-                                <tr className="border-b border-white/20">
-                                    <th className="px-4 py-3 text-left text-white font-semibold">#</th>
-                                    <th className="px-4 py-3 text-left text-white font-semibold">Timestamp</th>
-                                    <th className="px-4 py-3 text-left text-white font-semibold">Step</th>
-                                    <th className="px-4 py-3 text-left text-white font-semibold">Substep</th>
-                                    <th className="px-4 py-3 text-left text-white font-semibold">Intent</th>
-                                    <th className="px-4 py-3 text-left text-white font-semibold">Optum Conf.</th>
-                                    <th className="px-4 py-3 text-left text-white font-semibold">Patient Conf.</th>
-                                    <th className="px-4 py-3 text-left text-white font-semibold">Flag</th>
-                                    <th className="px-4 py-3 text-left text-white font-semibold">Reason</th>
-                                    <th className="px-4 py-3 text-left text-white font-semibold">R SPH</th>
-                                    <th className="px-4 py-3 text-left text-white font-semibold">R CYL</th>
-                                    <th className="px-4 py-3 text-left text-white font-semibold">L SPH</th>
-                                    <th className="px-4 py-3 text-left text-white font-semibold">L CYL</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {filteredData.map((row, index) => (
-                                    <tr 
-                                        key={row.id} 
-                                        className={`border-b border-white/10 hover:bg-white/5 transition-colors ${getRowBackgroundColor(row.flag)}`}
-                                    >
-                                        <td className="px-4 py-3 text-white">{index + 1}</td>
-                                        <td className="px-4 py-3 text-white text-xs">{row.timestamp?.substring(11, 19) || '-'}</td>
-                                        <td className="px-4 py-3 text-white font-medium">{row.step || '-'}</td>
-                                        <td className="px-4 py-3 text-white max-w-xs truncate" title={row.substep}>
-                                            {row.substep || '-'}
-                                        </td>
-                                        <td className="px-4 py-3 text-white max-w-xs truncate" title={row.intent_of_optum}>
-                                            {row.intent_of_optum || '-'}
-                                        </td>
-                                        <td className="px-4 py-3 text-white text-center">{row.confidence_of_optum || '-'}</td>
-                                        <td className="px-4 py-3 text-white text-center">{row.patient_confidence_score || '-'}</td>
-                                        <td className="px-4 py-3">
-                                            {row.flag && (
-                                                <span className={`px-2 py-1 rounded text-xs font-semibold ${
-                                                    row.flag === 'GREEN' ? 'bg-green-500 text-white' :
-                                                    row.flag === 'YELLOW' ? 'bg-yellow-500 text-slate-900' :
-                                                    row.flag === 'RED' ? 'bg-red-500 text-white' :
-                                                    'bg-slate-500 text-white'
-                                                }`}>
-                                                    {row.flag}
-                                                </span>
-                                            )}
-                                        </td>
-                                        <td className="px-4 py-3 text-white text-xs max-w-xs truncate" title={row.reason_for_flag}>
-                                            {row.reason_for_flag || '-'}
-                                        </td>
-                                        <td className="px-4 py-3 text-white">{row.r_sph || '-'}</td>
-                                        <td className="px-4 py-3 text-white">{row.r_cyl || '-'}</td>
-                                        <td className="px-4 py-3 text-white">{row.l_sph || '-'}</td>
-                                        <td className="px-4 py-3 text-white">{row.l_cyl || '-'}</td>
+                    <div className="bg-white/10 backdrop-blur-md rounded-xl overflow-hidden">
+                        {/* Scrollable table container */}
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-xs border-collapse">
+                                <thead className="sticky top-0 bg-slate-800 z-10">
+                                    <tr className="border-b-2 border-white/30">
+                                        <th className="px-3 py-3 text-left text-white font-bold whitespace-nowrap border-r border-white/20">#</th>
+                                        <th className="px-3 py-3 text-left text-white font-bold whitespace-nowrap border-r border-white/20">Timestamp</th>
+                                        <th className="px-3 py-3 text-left text-white font-bold whitespace-nowrap border-r border-white/20">R_SPH</th>
+                                        <th className="px-3 py-3 text-left text-white font-bold whitespace-nowrap border-r border-white/20">R_CYL</th>
+                                        <th className="px-3 py-3 text-left text-white font-bold whitespace-nowrap border-r border-white/20">R_AXIS</th>
+                                        <th className="px-3 py-3 text-left text-white font-bold whitespace-nowrap border-r border-white/20">R_ADD</th>
+                                        <th className="px-3 py-3 text-left text-white font-bold whitespace-nowrap border-r border-white/20">L_SPH</th>
+                                        <th className="px-3 py-3 text-left text-white font-bold whitespace-nowrap border-r border-white/20">L_CYL</th>
+                                        <th className="px-3 py-3 text-left text-white font-bold whitespace-nowrap border-r border-white/20">L_AXIS</th>
+                                        <th className="px-3 py-3 text-left text-white font-bold whitespace-nowrap border-r border-white/20">L_ADD</th>
+                                        <th className="px-3 py-3 text-left text-white font-bold whitespace-nowrap border-r border-white/20">PD</th>
+                                        <th className="px-3 py-3 text-left text-white font-bold whitespace-nowrap border-r border-white/20">Chart Number</th>
+                                        <th className="px-3 py-3 text-left text-white font-bold whitespace-nowrap border-r border-white/20">Occluder State</th>
+                                        <th className="px-3 py-3 text-left text-white font-bold whitespace-nowrap border-r border-white/20">Chart Display</th>
+                                        <th className="px-3 py-3 text-left text-white font-bold whitespace-nowrap border-r border-white/20 bg-blue-900/50">Step</th>
+                                        <th className="px-3 py-3 text-left text-white font-bold whitespace-nowrap border-r border-white/20 bg-blue-900/50">Substep</th>
+                                        <th className="px-3 py-3 text-left text-white font-bold whitespace-nowrap border-r border-white/20 bg-blue-900/50">Intent of Optum</th>
+                                        <th className="px-3 py-3 text-left text-white font-bold whitespace-nowrap border-r border-white/20 bg-blue-900/50">Conf. Optum</th>
+                                        <th className="px-3 py-3 text-left text-white font-bold whitespace-nowrap border-r border-white/20 bg-blue-900/50">Patient Conf.</th>
+                                        <th className="px-3 py-3 text-left text-white font-bold whitespace-nowrap border-r border-white/20 bg-blue-900/50">Flag</th>
+                                        <th className="px-3 py-3 text-left text-white font-bold whitespace-nowrap bg-blue-900/50">Reason for Flag</th>
                                     </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                                </thead>
+                                <tbody>
+                                    {filteredData.map((row, index) => (
+                                        <tr 
+                                            key={row.id} 
+                                            className={`border-b border-white/10 hover:bg-white/5 transition-colors ${getRowBackgroundColor(row.flag)}`}
+                                        >
+                                            <td className="px-3 py-2 text-white font-medium border-r border-white/10">{index + 1}</td>
+                                            <td className="px-3 py-2 text-white whitespace-nowrap border-r border-white/10">{row.timestamp || '-'}</td>
+                                            <td className="px-3 py-2 text-white text-center border-r border-white/10">{row.r_sph || '-'}</td>
+                                            <td className="px-3 py-2 text-white text-center border-r border-white/10">{row.r_cyl || '-'}</td>
+                                            <td className="px-3 py-2 text-white text-center border-r border-white/10">{row.r_axis || '-'}</td>
+                                            <td className="px-3 py-2 text-white text-center border-r border-white/10">{row.r_add || '-'}</td>
+                                            <td className="px-3 py-2 text-white text-center border-r border-white/10">{row.l_sph || '-'}</td>
+                                            <td className="px-3 py-2 text-white text-center border-r border-white/10">{row.l_cyl || '-'}</td>
+                                            <td className="px-3 py-2 text-white text-center border-r border-white/10">{row.l_axis || '-'}</td>
+                                            <td className="px-3 py-2 text-white text-center border-r border-white/10">{row.l_add || '-'}</td>
+                                            <td className="px-3 py-2 text-white text-center border-r border-white/10">{row.pd || '-'}</td>
+                                            <td className="px-3 py-2 text-white border-r border-white/10">{row.chart_number || '-'}</td>
+                                            <td className="px-3 py-2 text-white border-r border-white/10">{row.occluder_state || '-'}</td>
+                                            <td className="px-3 py-2 text-white border-r border-white/10 max-w-[200px]">
+                                                <div className="truncate" title={row.chart_display}>
+                                                    {row.chart_display || '-'}
+                                                </div>
+                                            </td>
+                                            <td className="px-3 py-2 text-white font-medium border-r border-white/10 bg-blue-900/20">{row.step || '-'}</td>
+                                            <td className="px-3 py-2 text-white border-r border-white/10 bg-blue-900/20 max-w-[250px]">
+                                                <div className="truncate" title={row.substep}>
+                                                    {row.substep || '-'}
+                                                </div>
+                                            </td>
+                                            <td className="px-3 py-2 text-white border-r border-white/10 bg-blue-900/20 max-w-[250px]">
+                                                <div className="truncate" title={row.intent_of_optum}>
+                                                    {row.intent_of_optum || '-'}
+                                                </div>
+                                            </td>
+                                            <td className="px-3 py-2 text-white text-center border-r border-white/10 bg-blue-900/20">{row.confidence_of_optum || '-'}</td>
+                                            <td className="px-3 py-2 text-white text-center border-r border-white/10 bg-blue-900/20">{row.patient_confidence_score || '-'}</td>
+                                            <td className="px-3 py-2 border-r border-white/10 bg-blue-900/20">
+                                                {row.flag && (
+                                                    <span className={`px-2 py-1 rounded text-xs font-semibold whitespace-nowrap ${
+                                                        row.flag === 'GREEN' ? 'bg-green-500 text-white' :
+                                                        row.flag === 'YELLOW' ? 'bg-yellow-500 text-slate-900' :
+                                                        row.flag === 'RED' ? 'bg-red-500 text-white' :
+                                                        'bg-slate-500 text-white'
+                                                    }`}>
+                                                        {row.flag}
+                                                    </span>
+                                                )}
+                                            </td>
+                                            <td className="px-3 py-2 text-white bg-blue-900/20 max-w-[200px]">
+                                                <div className="truncate" title={row.reason_for_flag}>
+                                                    {row.reason_for_flag || '-'}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 )}
             </div>

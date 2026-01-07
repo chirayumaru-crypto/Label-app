@@ -69,34 +69,13 @@ export const saveLabel = async (imageId: number, label: string) => {
 };
 
 export const getSpreadsheetData = async (datasetId: number) => {
-    // Join with auth.users to get user email
     const { data, error } = await supabase
         .from('spreadsheet_data')
-        .select('*, user_id')
+        .select('*')
         .eq('dataset_id', datasetId)
         .order('id');
     
-    if (error) return { data: null, error };
-    
-    // Get unique user IDs
-    const userIds = [...new Set(data?.map((item: any) => item.user_id).filter(Boolean))];
-    
-    // Fetch user emails
-    const userEmails: Record<string, string> = {};
-    for (const userId of userIds) {
-        const { data: userData } = await supabase.auth.admin.getUserById(userId);
-        if (userData?.user?.email) {
-            userEmails[userId] = userData.user.email;
-        }
-    }
-    
-    // Attach emails to data
-    const dataWithEmails = data?.map((item: any) => ({
-        ...item,
-        user_email: item.user_id ? userEmails[item.user_id] || 'Unknown' : null
-    }));
-    
-    return { data: dataWithEmails, error: null };
+    return { data, error };
 };
 
 export const saveSpreadsheetData = async (datasetId: number, data: any[]) => {
@@ -111,10 +90,11 @@ export const saveSpreadsheetData = async (datasetId: number, data: any[]) => {
         .eq('dataset_id', datasetId)
         .eq('user_id', user.id);
 
-    // Insert new data with user_id
+    // Insert new data with user_id and user_email
     const records = data.map(row => ({
         dataset_id: datasetId,
         user_id: user.id,
+        user_email: user.email,
         data: row,
     }));
 
