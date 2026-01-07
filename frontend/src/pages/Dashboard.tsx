@@ -403,51 +403,7 @@ const Dashboard = () => {
                                                     <>
                                                         <button onClick={() => handleDelete(ds.id)} className="p-2 text-slate-400 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors"><Trash2 size={18} /></button>
                                                         
-                                                        {/* User Versions Dropdown */}
-                                                        <div className="relative">
-                                                            <button 
-                                                                onClick={() => setOpenDropdown(openDropdown === ds.id ? null : ds.id)} 
-                                                                className="flex items-center gap-1.5 px-2 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-lg text-[11px] font-medium"
-                                                            >
-                                                                <Users size={14} className="text-blue-400" />
-                                                                <span>{progressMap[ds.id]?.length || 0}</span>
-                                                                <ChevronDown size={12} className={openDropdown === ds.id ? 'rotate-180' : ''} />
-                                                            </button>
-                                                            {openDropdown === ds.id && (
-                                                                <div className="absolute top-full right-0 mt-2 w-64 bg-slate-800 border border-slate-600 rounded-xl shadow-2xl z-20 overflow-hidden">
-                                                                    <div className="p-2 bg-slate-750 border-b border-slate-600">
-                                                                        <p className="text-xs text-slate-400 font-semibold">Labeled Versions</p>
-                                                                    </div>
-                                                                    <div className="max-h-64 overflow-y-auto">
-                                                                        {progressMap[ds.id]?.length ? progressMap[ds.id].map(p => (
-                                                                            <div key={p.user_id} className="p-2.5 hover:bg-slate-700 transition-colors border-b border-slate-700 last:border-0">
-                                                                                <div className="flex justify-between items-center mb-1.5">
-                                                                                    <span className="font-semibold text-xs truncate">{p.name}</span>
-                                                                                    <span className="text-[10px] text-blue-400">{p.percentage}% done</span>
-                                                                                </div>
-                                                                                <div className="w-full bg-slate-700 h-1 rounded-full overflow-hidden mb-2">
-                                                                                    <div className="bg-blue-500 h-full transition-all" style={{ width: `${p.percentage}%` }} />
-                                                                                </div>
-                                                                                <div className="flex gap-1">
-                                                                                    <button 
-                                                                                        onClick={() => handleExport(ds.id, p.user_id)}
-                                                                                        className="flex-1 flex items-center justify-center gap-1 px-2 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded text-[10px] font-semibold"
-                                                                                    >
-                                                                                        <Download size={12} /> Download
-                                                                                    </button>
-                                                                                    <button 
-                                                                                        onClick={() => navigate(`/spreadsheet/${ds.id}?targetUser=${p.user_id}&userName=${encodeURIComponent(p.name)}`)}
-                                                                                        className="flex-1 flex items-center justify-center gap-1 px-2 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded text-[10px] font-semibold"
-                                                                                    >
-                                                                                        <Play size={12} /> View
-                                                                                    </button>
-                                                                                </div>
-                                                                            </div>
-                                                                        )) : <div className="p-4 text-center text-slate-500 text-xs">No versions yet</div>}
-                                                                    </div>
-                                                                </div>
-                                                            )}
-                                                        </div>
+                                                        {/* user-versions dropdown removed per request */}
                                                     </>
                                                 )}
                                                 <button onClick={() => navigate(`/spreadsheet/${ds.id}`)} className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg text-sm font-bold transition-all shadow-lg shadow-emerald-900/20">
