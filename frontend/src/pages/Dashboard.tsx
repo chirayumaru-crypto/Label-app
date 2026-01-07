@@ -166,7 +166,7 @@ const Dashboard = () => {
                     intent_of_optum: '',
                     confidence_of_optum: '',
                     patient_confidence_score: '',  // Always empty for user to fill
-                    flag: '',
+                    flag: 'GREEN', // default every row to GREEN
                     reason_for_flag: ''
                 };
                 headers.forEach((header, index) => {
