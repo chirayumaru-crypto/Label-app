@@ -242,134 +242,165 @@ const ViewLabels = () => {
         }
     };
 
+    const getEditableCellBg = (flag: string | null): string => {
+        // Editable columns should have purple background unless row has a flag color
+        if (!flag) return 'bg-purple-100';
+        const rowBg = getRowBackgroundColor(flag);
+        return rowBg || 'bg-purple-100';
+    };
+
+    // Check if a row is the default configuration
+    const isDefaultRow = (row: RowData): boolean => {
+        const normalize = (val: string) => val?.trim() || '';
+        const isZero = (val: string) => normalize(val) === '0' || normalize(val) === '0.0';
+        const is180 = (val: string) => normalize(val) === '180' || normalize(val) === '180.0';
+        const is64 = (val: string) => normalize(val) === '64' || normalize(val) === '64.0';
+        
+        return (
+            isZero(row.r_sph) &&
+            isZero(row.r_cyl) &&
+            is180(row.r_axis) &&
+            isZero(row.r_add) &&
+            isZero(row.l_sph) &&
+            isZero(row.l_cyl) &&
+            is180(row.l_axis) &&
+            isZero(row.l_add) &&
+            is64(row.pd) &&
+            normalize(row.chart_number).toLowerCase() === 'chart1' &&
+            normalize(row.occluder_state).toLowerCase() === 'bino'
+        );
+    };
+
+    // Check if a cell value has changed from previous row
+    const hasChanged = (currentRow: RowData, previousRow: RowData | null, field: keyof RowData): boolean => {
+        if (!previousRow) return false;
+        const compareFields: (keyof RowData)[] = [
+            'r_sph', 'r_cyl', 'r_axis', 'r_add',
+            'l_sph', 'l_cyl', 'l_axis', 'l_add',
+            'pd', 'chart_number', 'occluder_state', 'chart_display'
+        ];
+        if (!compareFields.includes(field)) return false;
+        return currentRow[field] !== previousRow[field];
+    };
+
+    const displayValue = (value: string) => {
+        if (value === 'nan' || value === '' || !value) return '';
+        return value;
+    };
+
     const selectedDataset = datasets.find(d => d.id === selectedDatasetId);
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
-            <div className="container mx-auto px-4 py-6">
-                {/* Header */}
-                <div className="flex items-center justify-between mb-6">
-                    <div className="flex items-center gap-4">
-                        <button
-                            onClick={() => navigate('/dashboard')}
-                            className="p-2 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors"
-                        >
-                            <ChevronLeft size={24} />
-                        </button>
-                        <div>
-                            <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-                                <FileSpreadsheet size={28} />
-                                View Labeled Data
-                            </h1>
-                            {selectedDataset && (
-                                <p className="text-slate-300 text-sm mt-1">
-                                    Dataset: {selectedDataset.name}
-                                </p>
-                            )}
-                        </div>
+        <div className="min-h-screen bg-white text-slate-900 flex flex-col">
+            {/* Header */}
+            <header className="h-16 bg-blue-50 border-b border-blue-200 flex items-center justify-between px-6 shrink-0">
+                <div className="flex items-center gap-4">
+                    <button
+                        onClick={() => navigate('/dashboard')}
+                        className="p-2 hover:bg-blue-100 rounded-lg transition-colors"
+                    >
+                        <ChevronLeft size={24} />
+                    </button>
+                    <div>
+                        <h1 className="font-bold text-lg">View Labeled Data</h1>
+                        {selectedDataset && (
+                            <p className="text-sm text-slate-600">{selectedDataset.name}</p>
+                        )}
                     </div>
+                </div>
+                <div className="flex items-center gap-2">
                     {selectedUserEmail && (
-                        <div className="flex gap-2">
+                        <>
                             <button
                                 onClick={() => {
                                     setSelectedUserEmail(null);
                                     setViewingData(false);
                                     setLabeledData([]);
                                 }}
-                                className="px-4 py-2 bg-slate-600 hover:bg-slate-700 text-white rounded-lg flex items-center gap-2 transition-colors"
+                                className="flex items-center gap-2 px-4 py-2 bg-slate-600 hover:bg-slate-700 text-white rounded-lg transition-colors"
                             >
                                 <ChevronLeft size={18} />
                                 Back to Users
                             </button>
                             <button
                                 onClick={() => handleExportUserData('csv', selectedUserEmail)}
-                                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center gap-2 transition-colors"
+                                className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
                             >
                                 <Download size={18} />
-                                Download CSV
+                                Export CSV
                             </button>
-                        </div>
+                        </>
                     )}
                 </div>
+            </header>
 
-                {/* Dataset Selection */}
-                <div className="bg-white/10 backdrop-blur-md rounded-xl p-6 mb-6">
-                    <label className="block text-white text-sm font-medium mb-2">
-                        Select Dataset
-                    </label>
-                    <select
-                        value={selectedDatasetId || ''}
-                        onChange={(e) => setSelectedDatasetId(e.target.value ? parseInt(e.target.value) : null)}
-                        className="w-full px-4 py-2 rounded-lg bg-white/20 text-white border border-white/30 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                    >
-                        <option value="" className="bg-slate-800">Select a dataset</option>
-                        {datasets.map(ds => (
-                            <option key={ds.id} value={ds.id} className="bg-slate-800">
-                                {ds.name}
-                            </option>
-                        ))}
-                    </select>
-                </div>
-
-                {/* Main Content */}
+            {/* Content */}
+            <div className="flex-1 overflow-auto p-4">
                 {loading ? (
-                    <div className="text-center text-white py-12">
-                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
-                        Loading...
+                    <div className="flex items-center justify-center py-12">
+                        <p className="text-slate-900 text-xl">Loading...</p>
                     </div>
                 ) : !selectedDatasetId ? (
-                    <div className="bg-white/10 backdrop-blur-md rounded-xl p-12 text-center">
+                    <div className="bg-blue-50 border border-blue-200 rounded-xl p-12 text-center">
                         <FileSpreadsheet size={64} className="mx-auto text-slate-400 mb-4" />
-                        <p className="text-white text-lg">
+                        <p className="text-slate-900 text-lg mb-4">
                             Please select a dataset to view labeled data
                         </p>
+                        <select
+                            value={selectedDatasetId || ''}
+                            onChange={(e) => setSelectedDatasetId(e.target.value ? parseInt(e.target.value) : null)}
+                            className="px-4 py-2 rounded-lg bg-white border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                            <option value="">Select a dataset</option>
+                            {datasets.map(ds => (
+                                <option key={ds.id} value={ds.id}>
+                                    {ds.name}
+                                </option>
+                            ))}
+                        </select>
                     </div>
                 ) : !viewingData ? (
                     /* User Cards View */
                     <div>
+                        <h2 className="text-xl font-semibold text-slate-900 mb-4">
+                            Users who labeled this dataset
+                        </h2>
                         {userLabels.length === 0 ? (
-                            <div className="bg-white/10 backdrop-blur-md rounded-xl p-12 text-center">
+                            <div className="bg-blue-50 border border-blue-200 rounded-xl p-12 text-center">
                                 <User size={64} className="mx-auto text-slate-400 mb-4" />
-                                <p className="text-white text-lg">
+                                <p className="text-slate-900 text-lg">
                                     No users have labeled this dataset yet
                                 </p>
                             </div>
                         ) : (
-                            <div>
-                                <h2 className="text-xl font-semibold text-white mb-4">
-                                    Users who labeled this dataset ({userLabels.length})
-                                </h2>
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                    {userLabels.map((userLabel) => (
-                                        <div 
-                                            key={userLabel.user_email} 
-                                            className="bg-white/10 backdrop-blur-md rounded-xl p-6 border border-white/20 hover:border-purple-500/50 transition-all"
-                                        >
-                                            <div className="flex items-center gap-3 mb-4">
-                                                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center text-white font-bold text-lg">
-                                                    {userLabel.user_email.charAt(0).toUpperCase()}
-                                                </div>
-                                                <div className="flex-1 min-w-0">
-                                                    <p className="text-white font-medium truncate" title={userLabel.user_email}>
-                                                        {userLabel.user_email}
-                                                    </p>
-                                                    <p className="text-slate-400 text-sm">
-                                                        {userLabel.row_count} rows labeled
-                                                    </p>
-                                                </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                {userLabels.map((userLabel) => (
+                                    <div 
+                                        key={userLabel.user_email} 
+                                        className="bg-white border border-slate-300 rounded-xl p-6 hover:shadow-lg transition-shadow"
+                                    >
+                                        <div className="flex items-center gap-3 mb-4">
+                                            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold text-lg">
+                                                {userLabel.user_email.charAt(0).toUpperCase()}
                                             </div>
-                                            <div className="flex gap-2">
-                                                <button
-                                                    onClick={() => fetchUserLabeledData(selectedDatasetId!, userLabel.user_email)}
-                                                    className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
-                                                >
-                                                    <Eye size={18} />
-                                                    View
-                                                </button>
+                                            <div className="flex-1 min-w-0">
+                                                <p className="text-slate-900 font-medium truncate" title={userLabel.user_email}>
+                                                    {userLabel.user_email}
+                                                </p>
+                                                <p className="text-slate-600 text-sm">
+                                                    {userLabel.row_count} rows labeled
+                                                </p>
                                             </div>
                                         </div>
-                                    ))}
-                                </div>
+                                        <button
+                                            onClick={() => fetchUserLabeledData(selectedDatasetId!, userLabel.user_email)}
+                                            className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+                                        >
+                                            <Eye size={18} />
+                                            View Spreadsheet
+                                        </button>
+                                    </div>
+                                ))}
                             </div>
                         )}
                     </div>
@@ -377,112 +408,88 @@ const ViewLabels = () => {
                     /* Viewing specific user's data */
                     <div>
                         {/* User info banner */}
-                        <div className="bg-gradient-to-r from-purple-600/20 to-blue-600/20 backdrop-blur-md rounded-xl p-4 mb-4 border border-purple-500/30">
+                        <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-4">
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center text-white font-bold">
+                                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold">
                                         {selectedUserEmail?.charAt(0).toUpperCase()}
                                     </div>
                                     <div>
-                                        <p className="text-white font-medium">Viewing data labeled by:</p>
-                                        <p className="text-purple-300 text-sm">{selectedUserEmail}</p>
+                                        <p className="text-slate-900 font-medium">Viewing data labeled by:</p>
+                                        <p className="text-blue-600 text-sm">{selectedUserEmail}</p>
                                     </div>
                                 </div>
-                                <div className="text-slate-300 text-sm">
-                                    <span className="font-semibold text-white">{labeledData.length}</span> rows
+                                <div className="text-slate-600 text-sm">
+                                    <span className="font-semibold text-slate-900">{labeledData.length}</span> rows
                                 </div>
                             </div>
                         </div>
 
-                        {/* Read-only data table */}
-                        <div className="bg-white/10 backdrop-blur-md rounded-xl overflow-hidden">
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-xs border-collapse">
-                                <thead className="sticky top-0 bg-slate-800 z-10">
-                                    <tr className="border-b-2 border-white/30">
-                                        <th className="px-3 py-3 text-left text-white font-bold whitespace-nowrap border-r border-white/20">#</th>
-                                        <th className="px-3 py-3 text-left text-white font-bold whitespace-nowrap border-r border-white/20">Timestamp</th>
-                                        <th className="px-3 py-3 text-left text-white font-bold whitespace-nowrap border-r border-white/20">R_SPH</th>
-                                        <th className="px-3 py-3 text-left text-white font-bold whitespace-nowrap border-r border-white/20">R_CYL</th>
-                                        <th className="px-3 py-3 text-left text-white font-bold whitespace-nowrap border-r border-white/20">R_AXIS</th>
-                                        <th className="px-3 py-3 text-left text-white font-bold whitespace-nowrap border-r border-white/20">R_ADD</th>
-                                        <th className="px-3 py-3 text-left text-white font-bold whitespace-nowrap border-r border-white/20">L_SPH</th>
-                                        <th className="px-3 py-3 text-left text-white font-bold whitespace-nowrap border-r border-white/20">L_CYL</th>
-                                        <th className="px-3 py-3 text-left text-white font-bold whitespace-nowrap border-r border-white/20">L_AXIS</th>
-                                        <th className="px-3 py-3 text-left text-white font-bold whitespace-nowrap border-r border-white/20">L_ADD</th>
-                                        <th className="px-3 py-3 text-left text-white font-bold whitespace-nowrap border-r border-white/20">PD</th>
-                                        <th className="px-3 py-3 text-left text-white font-bold whitespace-nowrap border-r border-white/20">Chart Number</th>
-                                        <th className="px-3 py-3 text-left text-white font-bold whitespace-nowrap border-r border-white/20">Occluder State</th>
-                                        <th className="px-3 py-3 text-left text-white font-bold whitespace-nowrap border-r border-white/20">Chart Display</th>
-                                        <th className="px-3 py-3 text-left text-white font-bold whitespace-nowrap border-r border-white/20 bg-blue-900/50">Step</th>
-                                        <th className="px-3 py-3 text-left text-white font-bold whitespace-nowrap border-r border-white/20 bg-blue-900/50">Substep</th>
-                                        <th className="px-3 py-3 text-left text-white font-bold whitespace-nowrap border-r border-white/20 bg-blue-900/50">Intent of Optum</th>
-                                        <th className="px-3 py-3 text-left text-white font-bold whitespace-nowrap border-r border-white/20 bg-blue-900/50">Conf. Optum</th>
-                                        <th className="px-3 py-3 text-left text-white font-bold whitespace-nowrap border-r border-white/20 bg-blue-900/50">Patient Conf.</th>
-                                        <th className="px-3 py-3 text-left text-white font-bold whitespace-nowrap border-r border-white/20 bg-blue-900/50">Flag</th>
-                                        <th className="px-3 py-3 text-left text-white font-bold whitespace-nowrap bg-blue-900/50">Reason for Flag</th>
+                        {/* Spreadsheet Table */}
+                        <div className="inline-block min-w-full">
+                            <table className="border-collapse border border-slate-300 text-sm">
+                                <thead className="sticky top-0 bg-blue-100 z-10">
+                                    <tr>
+                                        {/* Read-only columns */}
+                                        <th className="border border-slate-300 px-3 py-2 text-left bg-blue-100 text-slate-900">Timestamp</th>
+                                        <th className="border border-slate-300 px-3 py-2 text-left bg-blue-100 text-slate-900">R_SPH</th>
+                                        <th className="border border-slate-300 px-3 py-2 text-left bg-blue-100 text-slate-900">R_CYL</th>
+                                        <th className="border border-slate-300 px-3 py-2 text-left bg-blue-100 text-slate-900">R_AXIS</th>
+                                        <th className="border border-slate-300 px-3 py-2 text-left bg-blue-100 text-slate-900">R_ADD</th>
+                                        <th className="border border-slate-300 px-3 py-2 text-left bg-blue-100 text-slate-900">L_SPH</th>
+                                        <th className="border border-slate-300 px-3 py-2 text-left bg-blue-100 text-slate-900">L_CYL</th>
+                                        <th className="border border-slate-300 px-3 py-2 text-left bg-blue-100 text-slate-900">L_AXIS</th>
+                                        <th className="border border-slate-300 px-3 py-2 text-left bg-blue-100 text-slate-900">L_ADD</th>
+                                        <th className="border border-slate-300 px-3 py-2 text-left bg-blue-100 text-slate-900">PD</th>
+                                        <th className="border border-slate-300 px-3 py-2 text-left bg-blue-100 text-slate-900">Chart_Number</th>
+                                        <th className="border border-slate-300 px-3 py-2 text-left bg-blue-100 text-slate-900">Occluder_State</th>
+                                        <th className="border border-slate-300 px-3 py-2 text-left bg-blue-100 text-slate-900">Chart_Display</th>
+
+                                        {/* Editable columns */}
+                                        <th className="border border-slate-300 px-3 py-2 text-left bg-purple-100 text-slate-900">Substep</th>
+                                        <th className="border border-slate-300 px-3 py-2 text-left bg-purple-100 text-slate-900">Intent_of_Optum</th>
+                                        <th className="border border-slate-300 px-3 py-2 text-left bg-purple-100 text-slate-900">Confidence_of_Optum</th>
+                                        <th className="border border-slate-300 px-3 py-2 text-left bg-purple-100 text-slate-900">Patient_Confidence_Score</th>
+                                        <th className="border border-slate-300 px-3 py-2 text-left bg-purple-100 text-slate-900">Flag</th>
+                                        <th className="border border-slate-300 px-3 py-2 text-left bg-purple-100 text-slate-900">Reason_For_Flag</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {labeledData.map((row, index) => (
-                                        <tr 
-                                            key={row.id} 
-                                            className={`border-b border-white/10 hover:bg-white/5 transition-colors ${getRowBackgroundColor(row.flag)}`}
-                                        >
-                                            <td className="px-3 py-2 text-white font-medium border-r border-white/10">{index + 1}</td>
-                                            <td className="px-3 py-2 text-white whitespace-nowrap border-r border-white/10">{row.timestamp || '-'}</td>
-                                            <td className="px-3 py-2 text-white text-center border-r border-white/10">{row.r_sph || '-'}</td>
-                                            <td className="px-3 py-2 text-white text-center border-r border-white/10">{row.r_cyl || '-'}</td>
-                                            <td className="px-3 py-2 text-white text-center border-r border-white/10">{row.r_axis || '-'}</td>
-                                            <td className="px-3 py-2 text-white text-center border-r border-white/10">{row.r_add || '-'}</td>
-                                            <td className="px-3 py-2 text-white text-center border-r border-white/10">{row.l_sph || '-'}</td>
-                                            <td className="px-3 py-2 text-white text-center border-r border-white/10">{row.l_cyl || '-'}</td>
-                                            <td className="px-3 py-2 text-white text-center border-r border-white/10">{row.l_axis || '-'}</td>
-                                            <td className="px-3 py-2 text-white text-center border-r border-white/10">{row.l_add || '-'}</td>
-                                            <td className="px-3 py-2 text-white text-center border-r border-white/10">{row.pd || '-'}</td>
-                                            <td className="px-3 py-2 text-white border-r border-white/10">{row.chart_number || '-'}</td>
-                                            <td className="px-3 py-2 text-white border-r border-white/10">{row.occluder_state || '-'}</td>
-                                            <td className="px-3 py-2 text-white border-r border-white/10 max-w-[200px]">
-                                                <div className="truncate" title={row.chart_display}>
-                                                    {row.chart_display || '-'}
-                                                </div>
-                                            </td>
-                                            <td className="px-3 py-2 text-white font-medium border-r border-white/10 bg-blue-900/20">{row.step || '-'}</td>
-                                            <td className="px-3 py-2 text-white border-r border-white/10 bg-blue-900/20 max-w-[250px]">
-                                                <div className="truncate" title={row.substep}>
-                                                    {row.substep || '-'}
-                                                </div>
-                                            </td>
-                                            <td className="px-3 py-2 text-white border-r border-white/10 bg-blue-900/20 max-w-[250px]">
-                                                <div className="truncate" title={row.intent_of_optum}>
-                                                    {row.intent_of_optum || '-'}
-                                                </div>
-                                            </td>
-                                            <td className="px-3 py-2 text-white text-center border-r border-white/10 bg-blue-900/20">{row.confidence_of_optum || '-'}</td>
-                                            <td className="px-3 py-2 text-white text-center border-r border-white/10 bg-blue-900/20">{row.patient_confidence_score || '-'}</td>
-                                            <td className="px-3 py-2 border-r border-white/10 bg-blue-900/20">
-                                                {row.flag && (
-                                                    <span className={`px-2 py-1 rounded text-xs font-semibold whitespace-nowrap ${
-                                                        row.flag === 'GREEN' ? 'bg-green-500 text-white' :
-                                                        row.flag === 'YELLOW' ? 'bg-yellow-500 text-slate-900' :
-                                                        row.flag === 'RED' ? 'bg-red-500 text-white' :
-                                                        'bg-slate-500 text-white'
-                                                    }`}>
-                                                        {row.flag}
-                                                    </span>
-                                                )}
-                                            </td>
-                                            <td className="px-3 py-2 text-white bg-blue-900/20 max-w-[200px]">
-                                                <div className="truncate" title={row.reason_for_flag}>
-                                                    {row.reason_for_flag || '-'}
-                                                </div>
-                                            </td>
+                                    {labeledData.map((row, rowIndex) => {
+                                        const previousRow = rowIndex > 0 ? labeledData[rowIndex - 1] : null;
+                                        const isDefault = isDefaultRow(row);
+                                        const rowBgClass = isDefault ? 'bg-blue-100' : getRowBackgroundColor(row.flag);
+                                        
+                                        return (
+                                        <tr key={row.id} className={`${rowBgClass} hover:opacity-80 transition-opacity`}>
+                                            {/* Read-only cells with yellow highlighting for changes */}
+                                            <td className={`border border-slate-300 px-3 py-2 ${rowBgClass} text-slate-700`}>{displayValue(row.timestamp)}</td>
+                                            <td className={`border border-slate-300 px-3 py-2 ${hasChanged(row, previousRow, 'r_sph') ? 'bg-yellow-200' : rowBgClass} text-slate-700`}>{displayValue(row.r_sph)}</td>
+                                            <td className={`border border-slate-300 px-3 py-2 ${hasChanged(row, previousRow, 'r_cyl') ? 'bg-yellow-200' : rowBgClass} text-slate-700`}>{displayValue(row.r_cyl)}</td>
+                                            <td className={`border border-slate-300 px-3 py-2 ${hasChanged(row, previousRow, 'r_axis') ? 'bg-yellow-200' : rowBgClass} text-slate-700`}>{displayValue(row.r_axis)}</td>
+                                            <td className={`border border-slate-300 px-3 py-2 ${hasChanged(row, previousRow, 'r_add') ? 'bg-yellow-200' : rowBgClass} text-slate-700`}>{displayValue(row.r_add)}</td>
+                                            <td className={`border border-slate-300 px-3 py-2 ${hasChanged(row, previousRow, 'l_sph') ? 'bg-yellow-200' : rowBgClass} text-slate-700`}>{displayValue(row.l_sph)}</td>
+                                            <td className={`border border-slate-300 px-3 py-2 ${hasChanged(row, previousRow, 'l_cyl') ? 'bg-yellow-200' : rowBgClass} text-slate-700`}>{displayValue(row.l_cyl)}</td>
+                                            <td className={`border border-slate-300 px-3 py-2 ${hasChanged(row, previousRow, 'l_axis') ? 'bg-yellow-200' : rowBgClass} text-slate-700`}>{displayValue(row.l_axis)}</td>
+                                            <td className={`border border-slate-300 px-3 py-2 ${hasChanged(row, previousRow, 'l_add') ? 'bg-yellow-200' : rowBgClass} text-slate-700`}>{displayValue(row.l_add)}</td>
+                                            <td className={`border border-slate-300 px-3 py-2 ${hasChanged(row, previousRow, 'pd') ? 'bg-yellow-200' : rowBgClass} text-slate-700`}>{displayValue(row.pd)}</td>
+                                            <td className={`border border-slate-300 px-3 py-2 ${hasChanged(row, previousRow, 'chart_number') ? 'bg-yellow-200' : rowBgClass} text-slate-700`}>{displayValue(row.chart_number)}</td>
+                                            <td className={`border border-slate-300 px-3 py-2 ${hasChanged(row, previousRow, 'occluder_state') ? 'bg-yellow-200' : rowBgClass} text-slate-700`}>{displayValue(row.occluder_state)}</td>
+                                            <td className={`border border-slate-300 px-3 py-2 ${hasChanged(row, previousRow, 'chart_display') ? 'bg-yellow-200' : rowBgClass} text-slate-700`}>{displayValue(row.chart_display)}</td>
+
+                                            {/* Labeled columns - read-only view */}
+                                            <td className={`border border-slate-300 px-3 py-2 ${getEditableCellBg(row.flag)} text-slate-700`}>{displayValue(row.substep)}</td>
+                                            <td className={`border border-slate-300 px-3 py-2 ${getEditableCellBg(row.flag)} text-slate-700`}>{displayValue(row.intent_of_optum)}</td>
+                                            <td className={`border border-slate-300 px-3 py-2 ${getEditableCellBg(row.flag)} text-slate-700`}>{displayValue(row.confidence_of_optum)}</td>
+                                            <td className={`border border-slate-300 px-3 py-2 ${getEditableCellBg(row.flag)} text-slate-700`}>{displayValue(row.patient_confidence_score)}</td>
+                                            <td className={`border border-slate-300 px-3 py-2 ${getEditableCellBg(row.flag)} text-slate-700`}>{displayValue(row.flag)}</td>
+                                            <td className={`border border-slate-300 px-3 py-2 ${getEditableCellBg(row.flag)} text-slate-700`}>{displayValue(row.reason_for_flag)}</td>
                                         </tr>
-                                    ))}
+                                        );
+                                    })}
                                 </tbody>
                             </table>
                         </div>
-                    </div>
                     </div>
                 )}
             </div>
