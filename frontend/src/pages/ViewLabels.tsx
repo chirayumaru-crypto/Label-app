@@ -40,11 +40,11 @@ const ViewLabels = () => {
     const [selectedDatasetId, setSelectedDatasetId] = useState<number | null>(
         datasetIdParam ? parseInt(datasetIdParam) : null
     );
+    const [userLabels, setUserLabels] = useState<{ user_email: string; row_count: number; user_id: string }[]>([]);
+    const [selectedUserEmail, setSelectedUserEmail] = useState<string | null>(null);
     const [labeledData, setLabeledData] = useState<RowData[]>([]);
     const [loading, setLoading] = useState(false);
-    const [filterFlag, setFilterFlag] = useState<string>('all');
-    const [filterStep, setFilterStep] = useState<string>('all');
-    const [filterUser, setFilterUser] = useState<string>('all');
+    const [viewingData, setViewingData] = useState(false);
     const [user, setUser] = useState<any>(null);
 
     useEffect(() => {
@@ -58,7 +58,7 @@ const ViewLabels = () => {
 
     useEffect(() => {
         if (selectedDatasetId) {
-            fetchLabeledData(selectedDatasetId);
+            fetchUserLabels(selectedDatasetId);
         }
     }, [selectedDatasetId]);
 
@@ -71,6 +71,69 @@ const ViewLabels = () => {
             }
         } catch (err) {
             console.error('Failed to fetch datasets', err);
+        }
+    };
+
+    const fetchUserLabels = async (datasetId: number) => {
+        setLoading(true);
+        setSelectedUserEmail(null);
+        setViewingData(false);
+        try {
+            const { data, error } = await getSpreadsheetData(datasetId);
+            if (error) throw error;
+            
+            if (data) {
+                // Group by user and count rows
+                const userMap = new Map<string, { user_email: string; row_count: number; user_id: string }>();
+                
+                data.forEach((item: any) => {
+                    const email = item.user_email || 'Unknown User';
+                    const userId = item.user_id || 'unknown';
+                    
+                    if (userMap.has(email)) {
+                        userMap.get(email)!.row_count++;
+                    } else {
+                        userMap.set(email, {
+                            user_email: email,
+                            user_id: userId,
+                            row_count: 1
+                        });
+                    }
+                });
+                
+                setUserLabels(Array.from(userMap.values()));
+            }
+        } catch (err) {
+            console.error('Failed to fetch user labels', err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const fetchUserLabeledData = async (datasetId: number, userEmail: string) => {
+        setViewingData(true);
+        setLoading(true);
+        try {
+            const { data, error } = await getSpreadsheetData(datasetId);
+            if (error) throw error;
+            
+            if (data) {
+                // Filter data for specific user
+                const rows = data
+                    .filter((item: any) => item.user_email === userEmail)
+                    .map((item: any) => ({
+                        ...item.data,
+                        user_email: item.user_email,
+                        id: item.id
+                    }));
+                
+                setLabeledData(rows);
+                setSelectedUserEmail(userEmail);
+            }
+        } catch (err) {
+            console.error('Failed to fetch labeled data', err);
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -104,76 +167,65 @@ const ViewLabels = () => {
         }
     };
 
-    const handleExport = async (format: 'csv' | 'json') => {
+    const handleExportUserData = (format: 'csv' | 'json', userEmail: string) => {
         if (!selectedDatasetId) return;
         
         try {
-            const { data, error } = await exportDataset(selectedDatasetId, format);
-            if (error) throw error;
-            if (!data) return;
+            // Get data for specific user
+            const userRows = labeledData;
 
-            const url = window.URL.createObjectURL(data);
-            const link = document.createElement('a');
-            link.href = url;
-            link.setAttribute('download', `labeled_data_${selectedDatasetId}_${new Date().toISOString().split('T')[0]}.${format}`);
-            document.body.appendChild(link);
-            link.click();
-            link.remove();
+            if (format === 'csv') {
+                // Define columns for CSV export
+                const columns = [
+                    'timestamp', 'r_sph', 'r_cyl', 'r_axis', 'r_add',
+                    'l_sph', 'l_cyl', 'l_axis', 'l_add', 'pd',
+                    'chart_number', 'occluder_state', 'chart_display',
+                    'step', 'substep', 'intent_of_optum', 'confidence_of_optum',
+                    'patient_confidence_score', 'flag', 'reason_for_flag'
+                ];
+
+                // Create CSV header
+                const headers = columns.map(h => h.toUpperCase()).join(',');
+
+                // Create CSV rows
+                const csvRows = userRows.map(row => {
+                    return columns.map(col => {
+                        const value = (row as any)[col] || '';
+                        const stringValue = String(value);
+                        // Escape quotes and wrap in quotes if contains comma or quote
+                        if (stringValue.includes(',') || stringValue.includes('"') || stringValue.includes('\n')) {
+                            return '"' + stringValue.replace(/"/g, '""') + '"';
+                        }
+                        return stringValue;
+                    }).join(',');
+                });
+
+                const csv = [headers, ...csvRows].join('\n');
+                const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                const url = window.URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                const safeEmail = userEmail.replace(/[^a-z0-9]/gi, '_');
+                link.setAttribute('download', `labeled_data_${selectedDatasetId}_${safeEmail}_${new Date().toISOString().split('T')[0]}.csv`);
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
+            } else {
+                // JSON export
+                const jsonStr = JSON.stringify(userRows, null, 2);
+                const blob = new Blob([jsonStr], { type: 'application/json' });
+                const url = window.URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                const safeEmail = userEmail.replace(/[^a-z0-9]/gi, '_');
+                link.setAttribute('download', `labeled_data_${selectedDatasetId}_${safeEmail}_${new Date().toISOString().split('T')[0]}.json`);
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
+            }
         } catch (err) {
             console.error('Failed to export data', err);
             alert('Failed to export data');
-        }
-    };
-
-    const handleExportFiltered = (format: 'csv' | 'json') => {
-        if (filteredData.length === 0) return;
-
-        if (format === 'csv') {
-            // Define columns for CSV export
-            const columns = [
-                'timestamp', 'r_sph', 'r_cyl', 'r_axis', 'r_add',
-                'l_sph', 'l_cyl', 'l_axis', 'l_add', 'pd',
-                'chart_number', 'occluder_state', 'chart_display',
-                'step', 'substep', 'intent_of_optum', 'confidence_of_optum',
-                'patient_confidence_score', 'flag', 'reason_for_flag'
-            ];
-
-            // Create CSV header
-            const headers = columns.map(h => h.toUpperCase()).join(',');
-
-            // Create CSV rows
-            const csvRows = filteredData.map(row => {
-                return columns.map(col => {
-                    const value = (row as any)[col] || '';
-                    const stringValue = String(value);
-                    // Escape quotes and wrap in quotes if contains comma or quote
-                    if (stringValue.includes(',') || stringValue.includes('"') || stringValue.includes('\n')) {
-                        return '"' + stringValue.replace(/"/g, '""') + '"';
-                    }
-                    return stringValue;
-                }).join(',');
-            });
-
-            const csv = [headers, ...csvRows].join('\n');
-            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-            const url = window.URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.setAttribute('download', `filtered_labeled_data_${selectedDatasetId}_${new Date().toISOString().split('T')[0]}.csv`);
-            document.body.appendChild(link);
-            link.click();
-            link.remove();
-        } else {
-            // JSON export
-            const jsonStr = JSON.stringify(filteredData, null, 2);
-            const blob = new Blob([jsonStr], { type: 'application/json' });
-            const url = window.URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.setAttribute('download', `filtered_labeled_data_${selectedDatasetId}_${new Date().toISOString().split('T')[0]}.json`);
-            document.body.appendChild(link);
-            link.click();
-            link.remove();
         }
     };
 
@@ -189,16 +241,6 @@ const ViewLabels = () => {
                 return 'bg-white';
         }
     };
-
-    const filteredData = labeledData.filter(row => {
-        if (filterFlag !== 'all' && row.flag !== filterFlag) return false;
-        if (filterStep !== 'all' && row.step !== filterStep) return false;
-        if (filterUser !== 'all' && row.user_email !== filterUser) return false;
-        return true;
-    });
-
-    const uniqueSteps = Array.from(new Set(labeledData.map(row => row.step).filter(Boolean)));
-    const uniqueUsers = Array.from(new Set(labeledData.map(row => row.user_email).filter(Boolean)));
 
     const selectedDataset = datasets.find(d => d.id === selectedDatasetId);
 
@@ -226,164 +268,136 @@ const ViewLabels = () => {
                             )}
                         </div>
                     </div>
-                    <div className="flex gap-2">
-                        {/* Export All Data */}
-                        <div className="flex gap-1">
+                    {selectedUserEmail && (
+                        <div className="flex gap-2">
                             <button
-                                onClick={() => handleExport('csv')}
-                                disabled={!selectedDatasetId || labeledData.length === 0}
-                                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-600 disabled:cursor-not-allowed text-white rounded-lg flex items-center gap-2 transition-colors text-sm"
-                                title="Export all labeled data"
+                                onClick={() => {
+                                    setSelectedUserEmail(null);
+                                    setViewingData(false);
+                                    setLabeledData([]);
+                                }}
+                                className="px-4 py-2 bg-slate-600 hover:bg-slate-700 text-white rounded-lg flex items-center gap-2 transition-colors"
+                            >
+                                <ChevronLeft size={18} />
+                                Back to Users
+                            </button>
+                            <button
+                                onClick={() => handleExportUserData('csv', selectedUserEmail)}
+                                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center gap-2 transition-colors"
                             >
                                 <Download size={18} />
-                                All CSV
-                            </button>
-                            <button
-                                onClick={() => handleExport('json')}
-                                disabled={!selectedDatasetId || labeledData.length === 0}
-                                className="px-3 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-600 disabled:cursor-not-allowed text-white rounded-lg transition-colors text-sm"
-                                title="Export all as JSON"
-                            >
-                                JSON
+                                Download CSV
                             </button>
                         </div>
-                        
-                        {/* Export Filtered Data */}
-                        <div className="flex gap-1 border-l border-white/20 pl-2">
-                            <button
-                                onClick={() => handleExportFiltered('csv')}
-                                disabled={!selectedDatasetId || filteredData.length === 0}
-                                className="px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-slate-600 disabled:cursor-not-allowed text-white rounded-lg flex items-center gap-2 transition-colors text-sm"
-                                title="Export filtered data only"
-                            >
-                                <Download size={18} />
-                                Filtered CSV
-                            </button>
-                            <button
-                                onClick={() => handleExportFiltered('json')}
-                                disabled={!selectedDatasetId || filteredData.length === 0}
-                                className="px-3 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-slate-600 disabled:cursor-not-allowed text-white rounded-lg transition-colors text-sm"
-                                title="Export filtered as JSON"
-                            >
-                                JSON
-                            </button>
-                        </div>
-                    </div>
+                    )}
                 </div>
 
-                {/* Dataset Selection and Filters */}
+                {/* Dataset Selection */}
                 <div className="bg-white/10 backdrop-blur-md rounded-xl p-6 mb-6">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        {/* Dataset Selection */}
-                        <div>
-                            <label className="block text-white text-sm font-medium mb-2">
-                                Select Dataset
-                            </label>
-                            <select
-                                value={selectedDatasetId || ''}
-                                onChange={(e) => setSelectedDatasetId(e.target.value ? parseInt(e.target.value) : null)}
-                                className="w-full px-4 py-2 rounded-lg bg-white/20 text-white border border-white/30 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                            >
-                                <option value="" className="bg-slate-800">Select a dataset</option>
-                                {datasets.map(ds => (
-                                    <option key={ds.id} value={ds.id} className="bg-slate-800">
-                                        {ds.name} ({ds.labeled_count || 0} labeled)
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
-
-                        {/* Filter by Flag */}
-                        <div>
-                            <label className="block text-white text-sm font-medium mb-2 flex items-center gap-2">
-                                <Filter size={16} />
-                                Filter by Flag
-                            </label>
-                            <select
-                                value={filterFlag}
-                                onChange={(e) => setFilterFlag(e.target.value)}
-                                className="w-full px-4 py-2 rounded-lg bg-white/20 text-white border border-white/30 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                            >
-                                <option value="all" className="bg-slate-800">All Flags</option>
-                                <option value="GREEN" className="bg-slate-800">🟢 GREEN</option>
-                                <option value="YELLOW" className="bg-slate-800">🟡 YELLOW</option>
-                                <option value="RED" className="bg-slate-800">🔴 RED</option>
-                            </select>
-                        </div>
-
-                        {/* Filter by Step */}
-                        <div>
-                            <label className="block text-white text-sm font-medium mb-2 flex items-center gap-2">
-                                <Filter size={16} />
-                                Filter by Step
-                            </label>
-                            <select
-                                value={filterStep}
-                                onChange={(e) => setFilterStep(e.target.value)}
-                                className="w-full px-4 py-2 rounded-lg bg-white/20 text-white border border-white/30 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                            >
-                                <option value="all" className="bg-slate-800">All Steps</option>
-                                {uniqueSteps.map(step => (
-                                    <option key={step} value={step} className="bg-slate-800">
-                                        {step}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
-                    </div>
-
-                    {/* Show unique users who labeled this dataset */}
-                    {selectedDatasetId && uniqueUsers.length > 0 && (
-                        <div className="mt-3 pt-3 border-t border-white/20">
-                            <p className="text-slate-300 text-xs mb-1">Labeled by:</p>
-                            <div className="flex flex-wrap gap-2">
-                                {uniqueUsers.map(email => (
-                                    <span 
-                                        key={email} 
-                                        className="px-2 py-1 bg-white/10 rounded text-xs text-slate-200 border border-white/20"
-                                    >
-                                        {email}
-                                    </span>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Stats */}
-                    {selectedDatasetId && (
-                        <div className="mt-4 flex gap-4 text-white">
-                            <div className="flex items-center gap-2">
-                                <FileSpreadsheet size={18} className="text-blue-400" />
-                                <span>Total Labeled: <strong>{labeledData.length}</strong></span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <Filter size={18} className="text-purple-400" />
-                                <span>Filtered: <strong>{filteredData.length}</strong></span>
-                            </div>
-                        </div>
-                    )}
+                    <label className="block text-white text-sm font-medium mb-2">
+                        Select Dataset
+                    </label>
+                    <select
+                        value={selectedDatasetId || ''}
+                        onChange={(e) => setSelectedDatasetId(e.target.value ? parseInt(e.target.value) : null)}
+                        className="w-full px-4 py-2 rounded-lg bg-white/20 text-white border border-white/30 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    >
+                        <option value="" className="bg-slate-800">Select a dataset</option>
+                        {datasets.map(ds => (
+                            <option key={ds.id} value={ds.id} className="bg-slate-800">
+                                {ds.name}
+                            </option>
+                        ))}
+                    </select>
                 </div>
 
-                {/* Data Table */}
+                {/* Main Content */}
                 {loading ? (
                     <div className="text-center text-white py-12">
                         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
-                        Loading labeled data...
+                        Loading...
                     </div>
-                ) : filteredData.length === 0 ? (
+                ) : !selectedDatasetId ? (
                     <div className="bg-white/10 backdrop-blur-md rounded-xl p-12 text-center">
                         <FileSpreadsheet size={64} className="mx-auto text-slate-400 mb-4" />
                         <p className="text-white text-lg">
-                            {selectedDatasetId 
-                                ? 'No labeled data found for this dataset' 
-                                : 'Please select a dataset to view labeled data'}
+                            Please select a dataset to view labeled data
                         </p>
                     </div>
+                ) : !viewingData ? (
+                    /* User Cards View */
+                    <div>
+                        {userLabels.length === 0 ? (
+                            <div className="bg-white/10 backdrop-blur-md rounded-xl p-12 text-center">
+                                <User size={64} className="mx-auto text-slate-400 mb-4" />
+                                <p className="text-white text-lg">
+                                    No users have labeled this dataset yet
+                                </p>
+                            </div>
+                        ) : (
+                            <div>
+                                <h2 className="text-xl font-semibold text-white mb-4">
+                                    Users who labeled this dataset ({userLabels.length})
+                                </h2>
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                    {userLabels.map((userLabel) => (
+                                        <div 
+                                            key={userLabel.user_email} 
+                                            className="bg-white/10 backdrop-blur-md rounded-xl p-6 border border-white/20 hover:border-purple-500/50 transition-all"
+                                        >
+                                            <div className="flex items-center gap-3 mb-4">
+                                                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center text-white font-bold text-lg">
+                                                    {userLabel.user_email.charAt(0).toUpperCase()}
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-white font-medium truncate" title={userLabel.user_email}>
+                                                        {userLabel.user_email}
+                                                    </p>
+                                                    <p className="text-slate-400 text-sm">
+                                                        {userLabel.row_count} rows labeled
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <div className="flex gap-2">
+                                                <button
+                                                    onClick={() => fetchUserLabeledData(selectedDatasetId!, userLabel.user_email)}
+                                                    className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
+                                                >
+                                                    <Eye size={18} />
+                                                    View
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </div>
                 ) : (
-                    <div className="bg-white/10 backdrop-blur-md rounded-xl overflow-hidden">
-                        {/* Scrollable table container */}
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-xs border-collapse">
+                    /* Viewing specific user's data */
+                    <div>
+                        {/* User info banner */}
+                        <div className="bg-gradient-to-r from-purple-600/20 to-blue-600/20 backdrop-blur-md rounded-xl p-4 mb-4 border border-purple-500/30">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center text-white font-bold">
+                                        {selectedUserEmail?.charAt(0).toUpperCase()}
+                                    </div>
+                                    <div>
+                                        <p className="text-white font-medium">Viewing data labeled by:</p>
+                                        <p className="text-purple-300 text-sm">{selectedUserEmail}</p>
+                                    </div>
+                                </div>
+                                <div className="text-slate-300 text-sm">
+                                    <span className="font-semibold text-white">{labeledData.length}</span> rows
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Read-only data table */}
+                        <div className="bg-white/10 backdrop-blur-md rounded-xl overflow-hidden">
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-xs border-collapse">
                                 <thead className="sticky top-0 bg-slate-800 z-10">
                                     <tr className="border-b-2 border-white/30">
                                         <th className="px-3 py-3 text-left text-white font-bold whitespace-nowrap border-r border-white/20">#</th>
@@ -468,6 +482,7 @@ const ViewLabels = () => {
                                 </tbody>
                             </table>
                         </div>
+                    </div>
                     </div>
                 )}
             </div>
